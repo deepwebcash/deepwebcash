@@ -49,7 +49,6 @@ EXTRA_LIBRARIES = \
   libdwcash.a \
 	libgpusolver.a
 
->>>>>>> zogminer-zcash-master
 if ENABLE_WALLET
 BITCOIN_INCLUDES += $(BDB_CPPFLAGS)
 EXTRA_LIBRARIES += libbitcoin_wallet.a
