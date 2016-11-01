@@ -35,11 +35,11 @@
 #define SLOT_LEN                        32
 // Total size of hash table
 #define HT_SIZE				(NR_ROWS * NR_SLOTS * SLOT_LEN)
-// Length of Zcash block header and nonce
-#define ZCASH_BLOCK_HEADER_LEN		140
-#define ZCASH_NONCE_LEN			32
-// Number of bytes Zcash needs out of Blake
-#define ZCASH_HASH_LEN                  50
+// Length of DeepWebCash block header and nonce
+#define DWCASH_BLOCK_HEADER_LEN		140
+#define DWCASH_NONCE_LEN			32
+// Number of bytes DeepWebCash needs out of Blake
+#define DWCASH_HASH_LEN                  50
 // Number of wavefronts per SIMD for the Blake kernel.
 // Blake is ALU-bound (beside the atomic counter being incremented) so we need
 // at least 2 wavefronts per SIMD to hide the 2-clock latency of integer

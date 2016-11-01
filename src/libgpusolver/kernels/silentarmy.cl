@@ -35,11 +35,11 @@
 #define SLOT_LEN                        32
 // Total size of hash table
 #define HT_SIZE				(NR_ROWS * NR_SLOTS * SLOT_LEN)
-// Length of Zcash block header and nonce
-#define ZCASH_BLOCK_HEADER_LEN		140
-#define ZCASH_NONCE_LEN			32
-// Number of bytes Zcash needs out of Blake
-#define ZCASH_HASH_LEN                  50
+// Length of DeepWebCash block header and nonce
+#define DWCASH_BLOCK_HEADER_LEN		140
+#define DWCASH_NONCE_LEN			32
+// Number of bytes DeepWebCash needs out of Blake
+#define DWCASH_HASH_LEN                  50
 // Number of wavefronts per SIMD for the Blake kernel.
 // Blake is ALU-bound (beside the atomic counter being incremented) so we need
 // at least 2 wavefronts per SIMD to hide the 2-clock latency of integer
@@ -283,7 +283,7 @@ void kernel_round0(__global ulong *blake_state, __global char *ht,
         v[14] = blake_iv[6];
         v[15] = blake_iv[7];
         // mix in length of data
-        v[12] ^= ZCASH_BLOCK_HEADER_LEN + 4 /* length of "i" */;
+        v[12] ^= DWCASH_BLOCK_HEADER_LEN + 4 /* length of "i" */;
         // last block
         v[14] ^= -1;
 
@@ -408,7 +408,7 @@ void kernel_round0(__global ulong *blake_state, __global char *ht,
         h[6] = (blake_state[6] ^ v[6] ^ v[14]) & 0xffff;
 
         // store the two Xi values in the hash table
-#if ZCASH_HASH_LEN == 50
+#if DWCASH_HASH_LEN == 50
         dropped += ht_store(0, ht, input * 2,
                 h[0],
                 h[1],
@@ -420,7 +420,7 @@ void kernel_round0(__global ulong *blake_state, __global char *ht,
                 (h[5] >> 8) | (h[6] << (64 - 8)),
                 (h[6] >> 8));
 #else
-#error "unsupported ZCASH_HASH_LEN"
+#error "unsupported DWCASH_HASH_LEN"
 #endif
 
         input++;

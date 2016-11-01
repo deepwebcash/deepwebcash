@@ -1,31 +1,31 @@
 bin_PROGRAMS += \
-  zcash/GenerateParams
+  dwcash/GenerateParams
 
 # tool for generating our public parameters
-zcash_GenerateParams_SOURCES = zcash/GenerateParams.cpp
-zcash_GenerateParams_LDADD = \
+dwcash_GenerateParams_SOURCES = dwcash/GenerateParams.cpp
+dwcash_GenerateParams_LDADD = \
   $(BOOST_LIBS) \
-  $(LIBZCASH) \
+  $(LIBDWCASH) \
   $(LIBBITCOIN_UTIL) \
   $(LIBBITCOIN_CRYPTO) \
-  $(LIBZCASH_LIBS)
+  $(LIBDWCASH_LIBS)
 
-zcash_miner_SOURCES = \
+dwcash_miner_SOURCES = \
   libstratum/StratumClient.cpp \
   libstratum/StratumClient.h \
-  libstratum/ZcashStratum.cpp \
-  libstratum/ZcashStratum.h \
+  libstratum/DeepWebCashStratum.cpp \
+  libstratum/DeepWebCashStratum.h \
   standaloneminer.cpp
-zcash_miner_CPPFLAGS = $(BITCOIN_INCLUDES)
-zcash_miner_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
-zcash_miner_LDADD = \
+dwcash_miner_CPPFLAGS = $(BITCOIN_INCLUDES)
+dwcash_miner_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+dwcash_miner_LDADD = \
   $(LIBBITCOIN_COMMON) \
   $(LIBBITCOIN_CRYPTO) \
   $(LIBBITCOIN_UTIL) \
   $(LIBSECP256K1) \
   $(BOOST_LIBS) \
   $(CRYPTO_LIBS) \
-  $(LIBZCASH) \
-  $(LIBZCASH_LIBS) \
+  $(LIBDWCASH) \
+  $(LIBDWCASH_LIBS) \
   $(LIBGPUSOLVER) \
   $(LIBGPUSOLVER_LIBS)

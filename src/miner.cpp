@@ -423,7 +423,7 @@ static bool ProcessBlockFound(CBlock* pblock, CWallet& wallet, CReserveKey& rese
     {
         LOCK(cs_main);
         if (pblock->hashPrevBlock != chainActive.Tip()->GetBlockHash())
-            return error("ZcashMiner: generated block is stale");
+            return error("DeepWebCashMiner: generated block is stale");
     }
 
     // Remove key from key pool
@@ -438,7 +438,7 @@ static bool ProcessBlockFound(CBlock* pblock, CWallet& wallet, CReserveKey& rese
     // Process this block the same as if we had received it from another node
     CValidationState state;
     if (!ProcessNewBlock(state, NULL, pblock, true, NULL))
-        return error("ZcashMiner: ProcessNewBlock, block not accepted");
+        return error("DeepWebCashMiner: ProcessNewBlock, block not accepted");
 
     minedBlocks.increment();
 
@@ -448,12 +448,12 @@ static bool ProcessBlockFound(CBlock* pblock, CWallet& wallet, CReserveKey& rese
 void static BitcoinMiner(CWallet *pwallet, GPUConfig conf)
 {
     if(conf.useGPU)
-      LogPrintf("ZcashMiner started on device: %u\n", conf.currentDevice);
+      LogPrintf("DeepWebCashMiner started on device: %u\n", conf.currentDevice);
     else
-      LogPrintf("ZcashMiner started\n");
+      LogPrintf("DeepWebCashMiner started\n");
 
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
-    RenameThread("zcash-miner");
+    RenameThread("dwcash-miner");
     const CChainParams& chainparams = Params();
 
     // Each thread has its own key and counter
@@ -465,12 +465,12 @@ void static BitcoinMiner(CWallet *pwallet, GPUConfig conf)
 
     //uint64_t nn = 0;
     GPUSolver * g_solver;
-    // If zcash.conf GPU=1
+    // If dwcash.conf GPU=1
     if(conf.useGPU) {
         g_solver = new GPUSolver(conf.currentPlatform, conf.currentDevice);
         LogPrint("pow", "Using Equihash solver GPU with n = %u, k = %u\n", n, k);
     }
-	uint8_t * header = (uint8_t *) calloc(ZCASH_BLOCK_HEADER_LEN, sizeof(uint8_t));
+	uint8_t * header = (uint8_t *) calloc(DWCASH_BLOCK_HEADER_LEN, sizeof(uint8_t));
 	uint8_t * zero = (uint8_t *) calloc(12, sizeof(uint8_t));
 
     std::string solver = GetArg("-equihashsolver", "default");
@@ -513,13 +513,13 @@ void static BitcoinMiner(CWallet *pwallet, GPUConfig conf)
             unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlockWithKey(reservekey));
             if (!pblocktemplate.get())
             {
-                LogPrintf("Error in ZcashMiner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
+                LogPrintf("Error in DeepWebCashMiner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
                 return;
             }
             CBlock *pblock = &pblocktemplate->block;
             IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
-            LogPrintf("Running ZcashMiner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
+            LogPrintf("Running DeepWebCashMiner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
                 ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
 
             //
@@ -558,7 +558,7 @@ void static BitcoinMiner(CWallet *pwallet, GPUConfig conf)
                                                       pblock->nNonce.size());
                 //}
 
-				for (size_t i = 0; i < ZCASH_NONCE_LEN; ++i)
+				for (size_t i = 0; i < DWCASH_NONCE_LEN; ++i)
 					header[108 + i] = pblock->nNonce.begin()[i];
 
                 // (x_1, x_2, ...) = A(I, V, n, k)
@@ -579,7 +579,7 @@ void static BitcoinMiner(CWallet *pwallet, GPUConfig conf)
 
                     // Found a solution
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                    LogPrintf("ZcashMiner:\n");
+                    LogPrintf("DeepWebCashMiner:\n");
                     LogPrintf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", pblock->GetHash().GetHex(), hashTarget.GetHex());
                     if (ProcessBlockFound(pblock, *pwallet, reservekey)) {
                         // Ignore chain updates caused by us
@@ -649,7 +649,7 @@ void static BitcoinMiner(CWallet *pwallet, GPUConfig conf)
                           if (found)
                               break;
                       } else {
-                          bool found = g_solver->run(n, k, header, ZCASH_BLOCK_HEADER_LEN, 0, validBlock, cancelledGPU, curr_state);
+                          bool found = g_solver->run(n, k, header, DWCASH_BLOCK_HEADER_LEN, 0, validBlock, cancelledGPU, curr_state);
                           ehSolverRuns.increment();
                           if (found)
                               break;
@@ -689,7 +689,7 @@ void static BitcoinMiner(CWallet *pwallet, GPUConfig conf)
     }
     catch (const boost::thread_interrupted&)
     {
-        LogPrintf("ZcashMiner terminated\n");
+        LogPrintf("DeepWebCashMiner terminated\n");
         if(conf.useGPU)
             delete g_solver;
 		free(header);
@@ -698,7 +698,7 @@ void static BitcoinMiner(CWallet *pwallet, GPUConfig conf)
     }
     catch (const std::runtime_error &e)
     {
-        LogPrintf("ZcashMiner runtime error: %s\n", e.what());
+        LogPrintf("DeepWebCashMiner runtime error: %s\n", e.what());
         if(conf.useGPU)
             delete g_solver;
 		free(header);
@@ -803,7 +803,7 @@ void GenerateBitcoins(bool fGenerate, CWallet* pwallet, int nThreads, GPUConfig 
         	    }
 	          }
 
-                  LogPrintf("ZcashMiner GPU[%d][%d] MemLimit: %s nThreads: %d\n", platform, device, to_string(result), maxThreads);
+                  LogPrintf("DeepWebCashMiner GPU[%d][%d] MemLimit: %s nThreads: %d\n", platform, device, to_string(result), maxThreads);
 
                   for (int i = 0; i < maxThreads; i++)
                     minerThreads->create_thread(boost::bind(&BitcoinMiner, pwallet, conf));
@@ -812,7 +812,7 @@ void GenerateBitcoins(bool fGenerate, CWallet* pwallet, int nThreads, GPUConfig 
             }
 
             if (devicesFound <= 0) {
-               LogPrintf("ZcashMiner ERROR, No OpenCL devices found!\n");
+               LogPrintf("DeepWebCashMiner ERROR, No OpenCL devices found!\n");
             }
 
         } else {
@@ -838,13 +838,13 @@ void GenerateBitcoins(bool fGenerate, CWallet* pwallet, int nThreads, GPUConfig 
               }
             }
 
-            LogPrintf("ZcashMiner GPU[%d][%d] MemLimit: %s nThreads: %d\n", conf.currentPlatform, conf.currentDevice, to_string(result), maxThreads);
+            LogPrintf("DeepWebCashMiner GPU[%d][%d] MemLimit: %s nThreads: %d\n", conf.currentPlatform, conf.currentDevice, to_string(result), maxThreads);
 
             for (int i = 0; i < maxThreads; i++)
               minerThreads->create_thread(boost::bind(&BitcoinMiner, pwallet, conf));
 
           } else {
-             LogPrintf("ZcashMiner ERROR, No OpenCL devices found!\n");
+             LogPrintf("DeepWebCashMiner ERROR, No OpenCL devices found!\n");
           }
 
         }

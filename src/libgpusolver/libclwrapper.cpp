@@ -403,17 +403,17 @@ void cl_gpuminer::run(uint8_t *header, size_t header_len, uint64_t nonce, sols_t
 		size_t      local_ws = 64;
 		size_t		global_ws;
 		uint64_t		*nonce_ptr;
-  	assert(header_len == ZCASH_BLOCK_HEADER_LEN ||
-    header_len == ZCASH_BLOCK_HEADER_LEN - ZCASH_NONCE_LEN);
-  	nonce_ptr = (uint64_t *)(header + ZCASH_BLOCK_HEADER_LEN - ZCASH_NONCE_LEN);
-		//memset(nonce_ptr, 0, ZCASH_NONCE_LEN);
+  	assert(header_len == DWCASH_BLOCK_HEADER_LEN ||
+    header_len == DWCASH_BLOCK_HEADER_LEN - DWCASH_NONCE_LEN);
+  	nonce_ptr = (uint64_t *)(header + DWCASH_BLOCK_HEADER_LEN - DWCASH_NONCE_LEN);
+		//memset(nonce_ptr, 0, DWCASH_NONCE_LEN);
 		//*nonce_ptr = nonce;
 		*ptr = *nonce_ptr;
 
-		//printf("\nSolving nonce %s\n", s_hexdump(nonce_ptr, ZCASH_NONCE_LEN));
+		//printf("\nSolving nonce %s\n", s_hexdump(nonce_ptr, DWCASH_NONCE_LEN));
 
-		zcash_blake2b_init(&blake, ZCASH_HASH_LEN, PARAM_N, PARAM_K);
-		zcash_blake2b_update(&blake, header, 128, 0);
+		dwcash_blake2b_init(&blake, DWCASH_HASH_LEN, PARAM_N, PARAM_K);
+		dwcash_blake2b_update(&blake, header, 128, 0);
 		buf_blake_st = cl::Buffer(m_context, CL_MEM_READ_ONLY, sizeof (blake.h), NULL, NULL);
 		m_queue.enqueueWriteBuffer(buf_blake_st, true, 0, sizeof(blake.h), blake.h);
 

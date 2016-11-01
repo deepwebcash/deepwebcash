@@ -29,9 +29,9 @@ static const uint8_t    blake2b_sigma[12][16] =
 };
 
 /*
-** Init the state according to Zcash parameters.
+** Init the state according to DeepWebCash parameters.
 */
-void zcash_blake2b_init(blake2b_state_t *st, uint8_t hash_len,
+void dwcash_blake2b_init(blake2b_state_t *st, uint8_t hash_len,
 	uint32_t n, uint32_t k)
 {
     assert(n > k);
@@ -39,7 +39,7 @@ void zcash_blake2b_init(blake2b_state_t *st, uint8_t hash_len,
     st->h[0] = blake2b_iv[0] ^ (0x01010000 | hash_len);
     for (uint32_t i = 1; i <= 5; i++)
         st->h[i] = blake2b_iv[i];
-    st->h[6] = blake2b_iv[6] ^ *(uint64_t *)"ZcashPoW";
+    st->h[6] = blake2b_iv[6] ^ *(uint64_t *)"DeepWebCashPoW";
     st->h[7] = blake2b_iv[7] ^ (((uint64_t)k << 32) | n);
     st->bytes = 0;
 }
@@ -70,7 +70,7 @@ static void mix(uint64_t *va, uint64_t *vb, uint64_t *vc, uint64_t *vd,
 ** msg_len      must be 128 (<= 128 allowed only for final partial block)
 ** is_final     indicate if this is the final block
 */
-void zcash_blake2b_update(blake2b_state_t *st, const uint8_t *_msg,
+void dwcash_blake2b_update(blake2b_state_t *st, const uint8_t *_msg,
         uint32_t msg_len, uint32_t is_final)
 {
     const uint64_t      *m = (const uint64_t *)_msg;
@@ -97,7 +97,7 @@ void zcash_blake2b_update(blake2b_state_t *st, const uint8_t *_msg,
         st->h[i] ^= v[i] ^ v[i + 8];
 }
 
-void zcash_blake2b_final(blake2b_state_t *st, uint8_t *out, uint8_t outlen)
+void dwcash_blake2b_final(blake2b_state_t *st, uint8_t *out, uint8_t outlen)
 {
     assert(outlen <= 64);
     memcpy(out, st->h, outlen);
