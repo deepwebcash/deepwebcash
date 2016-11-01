@@ -921,11 +921,8 @@ AC_SUBST(GMP_LIBS)
 AC_SUBST(GMPXX_LIBS)
 AC_SUBST(LIBSNARK_LIBS)
 AC_SUBST(LIBDWCASH_LIBS)
-<<<<<<< HEAD
-=======
 AC_SUBST(LIBGPUSOLVER_LIBS)
 
->>>>>>> zogminer-zcash-master
 AC_CONFIG_FILES([Makefile src/Makefile share/setup.nsi share/qt/Info.plist src/test/buildenv.py])
 AC_CONFIG_FILES([qa/pull-tester/run-bitcoind-for-test.sh],[chmod +x qa/pull-tester/run-bitcoind-for-test.sh])
 AC_CONFIG_FILES([qa/pull-tester/tests-config.sh],[chmod +x qa/pull-tester/tests-config.sh])
