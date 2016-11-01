@@ -70,8 +70,15 @@ public:
          * transaction cannot be spent since it did not originally exist in the
          * database (and is in any case of zero value).
          *
+<<<<<<< HEAD
          */
         const char* pszTimestamp = "DeepWebCash 2016-10-29";
+=======
+         * >>> from pyblake2 import blake2s
+         * >>> 'DeepWebCash' + blake2s(b'The Economist 2016-10-29 Known unknown: Another crypto-currency is born. BTC#436254 0000000000000000044f321997f336d2908cf8c8d6893e88dbf067e2d949487d ETH#2521903 483039a6b6bd8bd05f0584f9a078d075e454925eb71c1f13eaff59b405a721bb DJIA close on 27 Oct 2016: 18,169.68').hexdigest()
+         */
+        const char* pszTimestamp = "DeepWebCash0b9c4eef8b7cc417ee5001e3500984b6fea35683a7cac141a043c42064835d34";
+>>>>>>> zogminer-zcash-master
         CMutableTransaction txNew;
         txNew.vin.resize(1);
         txNew.vout.resize(1);

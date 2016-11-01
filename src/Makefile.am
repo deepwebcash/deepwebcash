@@ -32,6 +32,7 @@ LIBBITCOIN_UNIVALUE=univalue/libbitcoin_univalue.a
 LIBBITCOINQT=qt/libbitcoinqt.a
 LIBSECP256K1=secp256k1/libsecp256k1.la
 LIBDWCASH=libdwcash.a
+LIBGPUSOLVER=libgpusolver.a
 
 $(LIBSECP256K1): $(wildcard secp256k1/src/*) $(wildcard secp256k1/include/*)
 	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
@@ -45,7 +46,13 @@ EXTRA_LIBRARIES = \
   univalue/libbitcoin_univalue.a \
   libbitcoin_server.a \
   libbitcoin_cli.a \
+<<<<<<< HEAD
   libdwcash.a
+=======
+  libdwcash.a \
+	libgpusolver.a
+
+>>>>>>> zogminer-zcash-master
 if ENABLE_WALLET
 BITCOIN_INCLUDES += $(BDB_CPPFLAGS)
 EXTRA_LIBRARIES += libbitcoin_wallet.a
@@ -79,6 +86,18 @@ LIBDWCASH_H = \
   dwcash/Proof.hpp \
   dwcash/util.h \
   dwcash/DeepWebCash.h
+<<<<<<< HEAD
+=======
+
+LIBGPUSOLVER_H = \
+  libgpusolver/libgpusolver.h \
+  libgpusolver/gpuconfig.h \
+  libgpusolver/kernels/silentarmy.h \
+  libgpusolver/libclwrapper.h \
+  libgpusolver/cl.hpp \
+  libgpusolver/blake.h \
+  libgpusolver/param.h
+>>>>>>> zogminer-zcash-master
 
 .PHONY: FORCE check-symbols check-security
 # bitcoin core #
@@ -226,7 +245,12 @@ libbitcoin_server_a_SOURCES = \
   validationinterface.cpp \
   $(JSON_H) \
   $(BITCOIN_CORE_H) \
+<<<<<<< HEAD
   $(LIBDWCASH_H)
+=======
+  $(LIBDWCASH_H) \
+	$(LIBGPUSOLVER_H)
+>>>>>>> zogminer-zcash-master
 
 # wallet: shared between bitcoind and bitcoin-qt, but only linked
 # when wallet enabled
@@ -364,7 +388,8 @@ dwcashd_LDADD = \
   $(LIBDWCASH) \
   $(LIBLEVELDB) \
   $(LIBMEMENV) \
-  $(LIBSECP256K1)
+  $(LIBSECP256K1) \
+  $(LIBGPUSOLVER)
 
 if ENABLE_WALLET
 dwcashd_LDADD += libbitcoin_wallet.a
@@ -378,7 +403,13 @@ dwcashd_LDADD += \
   $(MINIUPNPC_LIBS) \
   $(LIBDWCASH) \
   $(LIBBITCOIN_CRYPTO) \
+<<<<<<< HEAD
   $(LIBDWCASH_LIBS)
+=======
+  $(LIBDWCASH_LIBS) \
+	$(LIBGPUSOLVER) \
+	$(LIBGPUSOLVER_LIBS)
+>>>>>>> zogminer-zcash-master
 #
 
 # bitcoin-cli binary #
@@ -439,6 +470,7 @@ libdwcash_a_SOURCES = \
   dwcash/circuit/note.tcc \
   dwcash/circuit/prfs.tcc \
   dwcash/circuit/utils.tcc
+<<<<<<< HEAD
 
 libdwcash_a_CPPFLAGS = -DMULTICORE -fopenmp -fPIC -DBINARY_OUTPUT -DCURVE_ALT_BN128 -DBOOST_SPIRIT_THREADSAFE -DHAVE_BUILD_INFO -D__STDC_FORMAT_MACROS $(HARDENED_CPPFLAGS) -pipe -O1 -g -Wstack-protector -fstack-protector-all -fPIE -fvisibility=hidden -DSTATIC $(BITCOIN_INCLUDES)
 
@@ -447,6 +479,30 @@ libdwcash_a_CXXFLAGS = $(HARDENED_CXXFLAGS) -fwrapv -fno-strict-aliasing
 libdwcash_a_LDFLAGS = $(HARDENED_LDFLAGS)
 
 libdwcash_a_CPPFLAGS += -DMONTGOMERY_OUTPUT
+=======
+
+libdwcash_a_CPPFLAGS = -DMULTICORE -fopenmp -fPIC -DBINARY_OUTPUT -DCURVE_ALT_BN128 -DBOOST_SPIRIT_THREADSAFE -DHAVE_BUILD_INFO -D__STDC_FORMAT_MACROS $(HARDENED_CPPFLAGS) -pipe -O1 -g -Wstack-protector -fstack-protector-all -fPIE -fvisibility=hidden -DSTATIC $(BITCOIN_INCLUDES)
+
+libdwcash_a_CXXFLAGS = $(HARDENED_CXXFLAGS) -fwrapv -fno-strict-aliasing
+
+libdwcash_a_LDFLAGS = $(HARDENED_LDFLAGS)
+
+libdwcash_a_CPPFLAGS += -DMONTGOMERY_OUTPUT
+
+libgpusolver_a_SOURCES = \
+  libgpusolver/libgpusolver.cpp \
+  libgpusolver/libclwrapper.cpp \
+  libgpusolver/blake.cpp
+
+libgpusolver_a_CPPFLAGS = -DMULTICORE -fopenmp -fPIC -DBINARY_OUTPUT -DCURVE_ALT_BN128 -DBOOST_SPIRIT_THREADSAFE -DHAVE_BUILD_INFO -D__STDC_FORMAT_MACROS $(HARDENED_CPPFLAGS) -pipe -O1 -g -Wstack-protector -fstack-protector-all -fPIE -fvisibility=hidden
+
+libgpusolver_a_CXXFLAGS = $(HARDENED_CXXFLAGS) -fwrapv -fno-strict-aliasing
+
+libgpusolver_a_LDFLAGS = $(HARDENED_LDFLAGS) -lOpenCL
+
+libgpusolver_a_CPPFLAGS += -DMONTGOMERY_OUTPUT
+
+>>>>>>> zogminer-zcash-master
 
 # dwcashconsensus library #
 if BUILD_BITCOIN_LIBS
