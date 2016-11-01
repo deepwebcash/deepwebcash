@@ -690,25 +690,19 @@ void static BitcoinMiner(CWallet *pwallet, GPUConfig conf)
     catch (const boost::thread_interrupted&)
     {
         LogPrintf("DeepWebCashMiner terminated\n");
-<<<<<<< HEAD
-=======
         if(conf.useGPU)
             delete g_solver;
 		free(header);
 		free(zero);
->>>>>>> zogminer-zcash-master
         throw;
     }
     catch (const std::runtime_error &e)
     {
         LogPrintf("DeepWebCashMiner runtime error: %s\n", e.what());
-<<<<<<< HEAD
-=======
         if(conf.useGPU)
             delete g_solver;
 		free(header);
 		free(zero);
->>>>>>> zogminer-zcash-master
         return;
     }
 
