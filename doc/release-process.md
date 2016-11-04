@@ -38,6 +38,8 @@ previous release:
     contrib/DEBIAN/control
     contrib/gitian-descriptors/gitian-linux.yml
 
+    Build and commit to update versions, and then perform the following commands:
+
     help2man -n "RPC client for the DeepWebCash daemon" src/dwcash-cli > contrib/DEBIAN/manpages/dwcash-cli.1
     help2man -n "Network daemon for interacting with the DeepWebCash blockchain" src/dwcashd > contrib/DEBIAN/manpages/dwcashd.1
 
@@ -125,6 +127,6 @@ Then, verify that nodes can connect to the testnet server, and update the guide 
 ## missing steps
 DeepWebCash still needs:
 
-* proper DeepWebCash-specific versions and names in software and documentation.
+* thorough pre-release testing (presumably more thorough than standard PR tests)
 
 * automated release deployment (e.g.: updating build-depends mirror, deploying testnet, etc...)
