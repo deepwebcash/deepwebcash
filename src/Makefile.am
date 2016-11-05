@@ -433,9 +433,6 @@ dwcash_cli_LDADD = \
   $(CRYPTO_LIBS) \
   $(LIBDWCASH) \
   $(LIBBITCOIN_CRYPTO) \
-<<<<<<< HEAD
-  $(LIBDWCASH_LIBS)
-=======
   $(LIBDWCASH_LIBS)
 if ENABLE_WALLET
 wallet_utility_LDADD = \
@@ -451,7 +448,6 @@ wallet_utility_LDADD = \
   $(LIBDWCASH_LIBS)
 endif
 
->>>>>>> c0cb3a5844d6657feff7001b0924007a79bf691a
 #
 
 # dwcash-tx binary #
