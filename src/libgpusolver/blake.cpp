@@ -39,7 +39,7 @@ void dwcash_blake2b_init(blake2b_state_t *st, uint8_t hash_len,
     st->h[0] = blake2b_iv[0] ^ (0x01010000 | hash_len);
     for (uint32_t i = 1; i <= 5; i++)
         st->h[i] = blake2b_iv[i];
-    st->h[6] = blake2b_iv[6] ^ *(uint64_t *)"DeepWebCashPoW";
+    st->h[6] = blake2b_iv[6] ^ *(uint64_t *)"ZcashPow";
     st->h[7] = blake2b_iv[7] ^ (((uint64_t)k << 32) | n);
     st->bytes = 0;
 }
