@@ -22,10 +22,10 @@
 
 #include "zcbenchmarks.h"
 
-#include "zcash/Zcash.h"
-#include "zcash/IncrementalMerkleTree.hpp"
+#include "dwcash/DeepWebCash.h"
+#include "dwcash/IncrementalMerkleTree.hpp"
 
-using namespace libzcash;
+using namespace libdwcash;
 
 void timer_start(timeval &tv_start)
 {
@@ -81,7 +81,7 @@ double benchmark_create_joinsplit()
 
     struct timeval tv_start;
     timer_start(tv_start);
-    JSDescription jsdesc(*pzcashParams,
+    JSDescription jsdesc(*pdwcashParams,
                          pubKeyHash,
                          anchor,
                          {JSInput(), JSInput()},
@@ -90,8 +90,8 @@ double benchmark_create_joinsplit()
                          0);
     double ret = timer_stop(tv_start);
 
-    auto verifier = libzcash::ProofVerifier::Strict();
-    assert(jsdesc.Verify(*pzcashParams, verifier, pubKeyHash));
+    auto verifier = libdwcash::ProofVerifier::Strict();
+    assert(jsdesc.Verify(*pdwcashParams, verifier, pubKeyHash));
     return ret;
 }
 
@@ -100,8 +100,8 @@ double benchmark_verify_joinsplit(const JSDescription &joinsplit)
     struct timeval tv_start;
     timer_start(tv_start);
     uint256 pubKeyHash;
-    auto verifier = libzcash::ProofVerifier::Strict();
-    joinsplit.Verify(*pzcashParams, verifier, pubKeyHash);
+    auto verifier = libdwcash::ProofVerifier::Strict();
+    joinsplit.Verify(*pdwcashParams, verifier, pubKeyHash);
     return timer_stop(tv_start);
 }
 
@@ -230,12 +230,12 @@ double benchmark_try_decrypt_notes(size_t nAddrs)
 {
     CWallet wallet;
     for (int i = 0; i < nAddrs; i++) {
-        auto sk = libzcash::SpendingKey::random();
+        auto sk = libdwcash::SpendingKey::random();
         wallet.AddSpendingKey(sk);
     }
 
-    auto sk = libzcash::SpendingKey::random();
-    auto tx = GetValidReceive(*pzcashParams, sk, 10, true);
+    auto sk = libdwcash::SpendingKey::random();
+    auto tx = GetValidReceive(*pdwcashParams, sk, 10, true);
 
     struct timeval tv_start;
     timer_start(tv_start);
@@ -248,14 +248,14 @@ double benchmark_increment_note_witnesses(size_t nTxs)
     CWallet wallet;
     ZCIncrementalMerkleTree tree;
 
-    auto sk = libzcash::SpendingKey::random();
+    auto sk = libdwcash::SpendingKey::random();
     wallet.AddSpendingKey(sk);
 
     // First block
     CBlock block1;
     for (int i = 0; i < nTxs; i++) {
-        auto wtx = GetValidReceive(*pzcashParams, sk, 10, true);
-        auto note = GetNote(*pzcashParams, sk, wtx, 0, 1);
+        auto wtx = GetValidReceive(*pdwcashParams, sk, 10, true);
+        auto note = GetNote(*pdwcashParams, sk, wtx, 0, 1);
         auto nullifier = note.nullifier(sk);
 
         mapNoteData_t noteData;
@@ -277,8 +277,8 @@ double benchmark_increment_note_witnesses(size_t nTxs)
     CBlock block2;
     block2.hashPrevBlock = block1.GetHash();
     {
-        auto wtx = GetValidReceive(*pzcashParams, sk, 10, true);
-        auto note = GetNote(*pzcashParams, sk, wtx, 0, 1);
+        auto wtx = GetValidReceive(*pdwcashParams, sk, 10, true);
+        auto note = GetNote(*pdwcashParams, sk, wtx, 0, 1);
         auto nullifier = note.nullifier(sk);
 
         mapNoteData_t noteData;

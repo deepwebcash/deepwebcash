@@ -1,4 +1,4 @@
-Zcash Contributors
+DeepWebCash Contributors
 ==================
 
 Jack Grigg (301)

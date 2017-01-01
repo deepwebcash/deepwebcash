@@ -27,9 +27,9 @@
 #include <boost/assign/list_of.hpp>
 #include "json/json_spirit_writer_template.h"
 
-#include "zcash/Note.hpp"
-#include "zcash/Address.hpp"
-#include "zcash/Proof.hpp"
+#include "dwcash/Note.hpp"
+#include "dwcash/Address.hpp"
+#include "dwcash/Proof.hpp"
 
 using namespace std;
 using namespace json_spirit;
@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE(tx_valid)
     // verifyFlags is a comma separated list of script verification flags to apply, or "NONE"
     Array tests = read_json(std::string(json_tests::tx_valid, json_tests::tx_valid + sizeof(json_tests::tx_valid)));
 
-    auto verifier = libzcash::ProofVerifier::Strict();
+    auto verifier = libdwcash::ProofVerifier::Strict();
     ScriptError err;
     BOOST_FOREACH(Value& tv, tests)
     {
@@ -175,7 +175,7 @@ BOOST_AUTO_TEST_CASE(tx_invalid)
     // verifyFlags is a comma separated list of script verification flags to apply, or "NONE"
     Array tests = read_json(std::string(json_tests::tx_invalid, json_tests::tx_invalid + sizeof(json_tests::tx_invalid)));
 
-    auto verifier = libzcash::ProofVerifier::Strict();
+    auto verifier = libdwcash::ProofVerifier::Strict();
     ScriptError err;
     BOOST_FOREACH(Value& tv, tests)
     {
@@ -249,7 +249,7 @@ BOOST_AUTO_TEST_CASE(basic_transaction_tests)
     CMutableTransaction tx;
     stream >> tx;
     CValidationState state;
-    auto verifier = libzcash::ProofVerifier::Strict();
+    auto verifier = libdwcash::ProofVerifier::Strict();
     BOOST_CHECK_MESSAGE(CheckTransaction(tx, state, verifier) && state.IsValid(), "Simple deserialized transaction should be valid.");
 
     // Check that duplicate txins fail
@@ -309,7 +309,7 @@ BOOST_AUTO_TEST_CASE(test_basic_joinsplit_verification)
     // on all platforms and would gently push us down an ugly
     // path. We should just fix the assertions.
     //
-    // Also, it's generally libzcash's job to ensure the
+    // Also, it's generally libdwcash's job to ensure the
     // integrity of the scheme through its own tests.
 
     // construct the r1cs keypair
@@ -318,10 +318,10 @@ BOOST_AUTO_TEST_CASE(test_basic_joinsplit_verification)
     // construct a merkle tree
     ZCIncrementalMerkleTree merkleTree;
 
-    libzcash::SpendingKey k = libzcash::SpendingKey::random();
-    libzcash::PaymentAddress addr = k.address();
+    libdwcash::SpendingKey k = libdwcash::SpendingKey::random();
+    libdwcash::PaymentAddress addr = k.address();
 
-    libzcash::Note note(addr.a_pk, 100, uint256(), uint256());
+    libdwcash::Note note(addr.a_pk, 100, uint256(), uint256());
 
     // commitment from coin
     uint256 commitment = note.cm();
@@ -336,16 +336,16 @@ BOOST_AUTO_TEST_CASE(test_basic_joinsplit_verification)
 
     // create JSDescription
     uint256 pubKeyHash;
-    boost::array<libzcash::JSInput, ZC_NUM_JS_INPUTS> inputs = {
-        libzcash::JSInput(witness, note, k),
-        libzcash::JSInput() // dummy input of zero value
+    boost::array<libdwcash::JSInput, ZC_NUM_JS_INPUTS> inputs = {
+        libdwcash::JSInput(witness, note, k),
+        libdwcash::JSInput() // dummy input of zero value
     };
-    boost::array<libzcash::JSOutput, ZC_NUM_JS_OUTPUTS> outputs = {
-        libzcash::JSOutput(addr, 50),
-        libzcash::JSOutput(addr, 50)
+    boost::array<libdwcash::JSOutput, ZC_NUM_JS_OUTPUTS> outputs = {
+        libdwcash::JSOutput(addr, 50),
+        libdwcash::JSOutput(addr, 50)
     };
 
-    auto verifier = libzcash::ProofVerifier::Strict();
+    auto verifier = libdwcash::ProofVerifier::Strict();
 
     {
         JSDescription jsdesc(*p, pubKeyHash, rt, inputs, outputs, 0, 0);
@@ -377,7 +377,7 @@ BOOST_AUTO_TEST_CASE(test_basic_joinsplit_verification)
 
 BOOST_AUTO_TEST_CASE(test_simple_joinsplit_invalidity)
 {
-    auto verifier = libzcash::ProofVerifier::Strict();
+    auto verifier = libdwcash::ProofVerifier::Strict();
     CMutableTransaction tx;
     tx.nVersion = 2;
     {

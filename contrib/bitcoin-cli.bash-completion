@@ -4,7 +4,7 @@
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 # call $bitcoin-cli for RPC
-_zcash_rpc() {
+_dwcash_rpc() {
     # determine already specified args necessary for RPC
     local rpcargs=()
     for i in ${COMP_LINE}; do
@@ -18,15 +18,15 @@ _zcash_rpc() {
 }
 
 # Add wallet accounts to COMPREPLY
-_zcash_accounts() {
+_dwcash_accounts() {
     local accounts
-    # Accounts are deprecated in Zcash
-    #accounts=$(_zcash_rpc listaccounts | awk -F '"' '{ print $2 }')
+    # Accounts are deprecated in DeepWebCash
+    #accounts=$(_dwcash_rpc listaccounts | awk -F '"' '{ print $2 }')
     accounts="\\\"\\\""
     COMPREPLY=( "${COMPREPLY[@]}" $( compgen -W "$accounts" -- "$cur" ) )
 }
 
-_zcash_cli() {
+_dwcash_cli() {
     local cur prev words=() cword
     local bitcoin_cli
 
@@ -62,7 +62,7 @@ _zcash_cli() {
     if ((cword > 3)); then
         case ${words[cword-3]} in
             addmultisigaddress)
-                _zcash_accounts
+                _dwcash_accounts
                 return 0
                 ;;
             getbalance|gettxout|importaddress|importpubkey|importprivkey|listreceivedbyaccount|listreceivedbyaddress|listsinceblock)
@@ -87,7 +87,7 @@ _zcash_cli() {
                 return 0
                 ;;
             move|setaccount)
-                _zcash_accounts
+                _dwcash_accounts
                 return 0
                 ;;
         esac
@@ -103,7 +103,7 @@ _zcash_cli() {
             return 0
             ;;
         getaccountaddress|getaddressesbyaccount|getbalance|getnewaddress|getreceivedbyaccount|listtransactions|move|sendfrom|sendmany)
-            _zcash_accounts
+            _dwcash_accounts
             return 0
             ;;
     esac
@@ -132,7 +132,7 @@ _zcash_cli() {
 
             # only parse help if senseful
             if [[ -z "$cur" || "$cur" =~ ^[a-z] ]]; then
-                commands=$(_zcash_rpc help 2>/dev/null | awk '$1 ~ /^[a-z]/ { print $1; }')
+                commands=$(_dwcash_rpc help 2>/dev/null | awk '$1 ~ /^[a-z]/ { print $1; }')
             fi
 
             COMPREPLY=( $( compgen -W "$helpopts $commands" -- "$cur" ) )
@@ -145,7 +145,7 @@ _zcash_cli() {
             ;;
     esac
 } &&
-complete -F _zcash_cli zcash-cli
+complete -F _dwcash_cli dwcash-cli
 
 # Local variables:
 # mode: shell-script
