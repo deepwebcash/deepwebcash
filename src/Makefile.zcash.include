@@ -1,5 +1,6 @@
 bin_PROGRAMS += \
-  dwcash/GenerateParams 
+  dwcash/GenerateParams \
+  dwcash/CreateJoinSplit
 
 # tool for generating our public parameters
 dwcash_GenerateParams_SOURCES = dwcash/GenerateParams.cpp
@@ -8,4 +9,14 @@ dwcash_GenerateParams_LDADD = \
   $(LIBDWCASH) \
   $(LIBBITCOIN_UTIL) \
   $(LIBBITCOIN_CRYPTO) \
+  $(LIBDWCASH_LIBS)
+
+# tool for profiling the creation of joinsplits
+dwcash_CreateJoinSplit_SOURCES = dwcash/CreateJoinSplit.cpp
+dwcash_CreateJoinSplit_LDADD = \
+  $(LIBBITCOIN_COMMON) \
+  $(LIBBITCOIN_UTIL) \
+  $(LIBBITCOIN_CRYPTO) \
+  $(LIBDWCASH) \
+  $(BOOST_LIBS) \
   $(LIBDWCASH_LIBS)

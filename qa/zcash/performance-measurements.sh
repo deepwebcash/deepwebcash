@@ -88,6 +88,12 @@ case "$1" in
             validatelargetx)
                 dwcash_rpc zcbenchmark validatelargetx 5
                 ;;
+            trydecryptnotes)
+                dwcash_rpc zcbenchmark trydecryptnotes 1000 "${@:3}"
+                ;;
+            incnotewitnesses)
+                dwcash_rpc zcbenchmark incnotewitnesses 100 "${@:3}"
+                ;;
             *)
                 dwcashd_stop
                 echo "Bad arguments."
@@ -115,6 +121,12 @@ case "$1" in
                 ;;
             verifyequihash)
                 dwcash_rpc zcbenchmark verifyequihash 1
+                ;;
+            trydecryptnotes)
+                dwcash_rpc zcbenchmark trydecryptnotes 1 "${@:3}"
+                ;;
+            incnotewitnesses)
+                dwcash_rpc zcbenchmark incnotewitnesses 1 "${@:3}"
                 ;;
             *)
                 dwcashd_massif_stop
@@ -144,6 +156,12 @@ case "$1" in
                 ;;
             verifyequihash)
                 dwcash_rpc zcbenchmark verifyequihash 1
+                ;;
+            trydecryptnotes)
+                dwcash_rpc zcbenchmark trydecryptnotes 1 "${@:3}"
+                ;;
+            incnotewitnesses)
+                dwcash_rpc zcbenchmark incnotewitnesses 1 "${@:3}"
                 ;;
             *)
                 dwcashd_valgrind_stop

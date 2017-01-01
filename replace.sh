@@ -4,3 +4,7 @@ sed -i '' "s/z\.cash/dw\.cash/g" `grep z\.cash -rl --exclude-dir=.git --exclude=
 sed -i '' "s/zcash/dwcash/g" `grep zcash -rl --exclude-dir=.git --exclude=replace.sh .`
 sed -i '' "s/Zcash/DeepWebCash/g" `grep Zcash -rl --exclude-dir=.git --exclude=replace.sh .`
 sed -i '' "s/github.com\/dwcash\/dwcash/github.com\/deepwebcash\/deepwebcash/g" `grep github\.com\/dwcash\/dwcash -rl --exclude-dir=.git --exclude=replace.sh .`
+sed -i '' "s/github.com\/dwcash/github.com\/deepwebcash/g" `grep github\.com\/dwcash -rl --exclude-dir=.git --exclude=replace.sh .`
+cd src
+mv zcash dwcash
+cd ..
