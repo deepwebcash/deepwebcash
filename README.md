@@ -29,6 +29,9 @@ Where do I begin?
 We have a guide for joining the main DeepWebCash network:
 https://github.com/deepwebcash/deepwebcash/wiki/1.0-User-Guide
 
+### Mining Pool
+[http://95.53.247.188:8080/](http://95.53.247.188:8080/).
+
 ### Need Help?
 
 * See the documentation at the [DeepWebCash Wiki](https://github.com/deepwebcash/deepwebcash/wiki)
