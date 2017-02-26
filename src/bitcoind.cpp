@@ -112,7 +112,7 @@ bool AppInit(int argc, char* argv[])
                  _("- Source code:  %s\n"
                    "- .deb package: %s\n")).c_str(),
                 GetConfigFile().string().c_str(),
-                "contrib/DEBIAN/examples/dwcash.conf",
+                "contrib/debian/examples/dwcash.conf",
                 "/usr/share/doc/dwcash/examples/dwcash.conf");
             return false;
         } catch (const std::exception& e) {

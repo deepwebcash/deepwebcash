@@ -37,11 +37,12 @@ previous release:
     configure.ac
     contrib/gitian-descriptors/gitian-linux.yml
 
-    Build and commit to update versions, and then perform the following commands:
+Build and commit to update versions, and then perform the following commands:
 
-    help2man -n "RPC client for the DeepWebCash daemon" src/dwcash-cli > contrib/DEBIAN/manpages/dwcash-cli.1
-    help2man -n "Network daemon for interacting with the DeepWebCash blockchain" src/dwcashd > contrib/DEBIAN/manpages/dwcashd.1
+    help2man -n "RPC client for the DeepWebCash daemon" src/dwcash-cli > contrib/debian/manpages/dwcash-cli.1
+    help2man -n "Network daemon for interacting with the DeepWebCash blockchain" src/dwcashd > contrib/debian/manpages/dwcashd.1
 
+Check the version number in the man pages as they use the commit id e.g. 1.0.6-xxxxxxx which may need to be manually cleaned up.  Also check the titles use "dwcashd" and "dwcash-cli", not "dwcash".
 
 In `configure.ac` and `clientversion.h`:
 
@@ -56,6 +57,9 @@ In `configure.ac` and `clientversion.h`:
 
 - Change `CLIENT_VERSION_IS_RELEASE` to false while DeepWebCash is in beta-test phase.
 
+If this release changes the behavior of the protocol or fixes a serious bug, we may
+also wish to change the `PROTOCOL_VERSION` in `version.h`.
+
 ### B2. Write release notes
 
 git shortlog helps a lot, for example:
@@ -63,13 +67,17 @@ git shortlog helps a lot, for example:
     $ git shortlog --no-merges v${DWCASH_RELEASE_PREV}..HEAD \
         > ./doc/release-notes/release-notes-${DWCASH_RELEASE}.md
 
+Add the newly created release notes to the Git repository:
+
+    $ git add doc/release-notes/release-notes-$DWCASH_RELEASE.md
+
 Update the Debian package changelog:
 
     export DEBVERSION="${DWCASH_RELEASE}"
     export DEBEMAIL="${DEBEMAIL:-team@dw.cash}"
     export DEBFULLNAME="${DEBFULLNAME:-DeepWebCash Company}"
 
-    dch -v $DEBVERSION -D jessie -c contrib/DEBIAN/changelog
+    dch -v $DEBVERSION -D jessie -c contrib/debian/changelog
 
 (`dch` comes from the devscripts package.)
 

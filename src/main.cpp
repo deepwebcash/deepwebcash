@@ -56,6 +56,7 @@ int64_t nTimeBestReceived = 0;
 CWaitableCriticalSection csBestBlock;
 CConditionVariable cvBlockChange;
 int nScriptCheckThreads = 0;
+bool fExperimentalMode = false;
 bool fImporting = false;
 bool fReindex = false;
 bool fTxIndex = false;
@@ -2707,6 +2708,7 @@ bool ActivateBestChain(CValidationState &state, CBlock *pblock) {
                         pnode->PushInventory(CInv(MSG_BLOCK, hashNewTip));
             }
             // Notify external listeners about the new tip.
+            GetMainSignals().UpdatedBlockTip(pindexNewTip);
             uiInterface.NotifyBlockTip(hashNewTip);
         }
     } while(pindexMostWork != chainActive.Tip());
