@@ -9,6 +9,7 @@ BUILD_PATH="/tmp/zcbuild"
 PACKAGE_NAME="dwcash"
 SRC_PATH=`pwd`
 SRC_DEB=$SRC_PATH/contrib/debian
+SRC_DOC=$SRC_PATH/doc
 
 umask 022
 
@@ -45,9 +46,9 @@ cp $SRC_DEB/changelog $DEB_DOC/changelog.Debian
 cp $SRC_DEB/copyright $DEB_DOC
 cp -r $SRC_DEB/examples $DEB_DOC
 # Copy manpages
-cp $SRC_DEB/manpages/dwcashd.1 $DEB_MAN
-cp $SRC_DEB/manpages/dwcash-cli.1 $DEB_MAN
-cp $SRC_DEB/manpages/dwcash-fetch-params.1 $DEB_MAN
+cp $SRC_DOC/man/dwcashd.1 $DEB_MAN
+cp $SRC_DOC/man/dwcash-cli.1 $DEB_MAN
+cp $SRC_DOC/man/dwcash-fetch-params.1 $DEB_MAN
 # Copy bash completion files
 cp $SRC_PATH/contrib/bitcoind.bash-completion $DEB_CMP/dwcashd
 cp $SRC_PATH/contrib/bitcoin-cli.bash-completion $DEB_CMP/dwcash-cli

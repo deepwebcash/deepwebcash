@@ -2,7 +2,7 @@ dnl require autoconf 2.60 (AS_ECHO/AS_ECHO_N)
 AC_PREREQ([2.60])
 define(_CLIENT_VERSION_MAJOR, 3)
 define(_CLIENT_VERSION_MINOR, 0)
-define(_CLIENT_VERSION_REVISION, 6)
+define(_CLIENT_VERSION_REVISION, 7)
 define(_CLIENT_VERSION_BUILD, 50)
 define(_ZC_BUILD_VAL, m4_if(m4_eval(_CLIENT_VERSION_BUILD < 25), 1, m4_incr(_CLIENT_VERSION_BUILD), m4_eval(_CLIENT_VERSION_BUILD < 50), 1, m4_eval(_CLIENT_VERSION_BUILD - 24), m4_eval(_CLIENT_VERSION_BUILD == 50), 1, , m4_eval(_CLIENT_VERSION_BUILD - 50)))
 define(_CLIENT_VERSION_SUFFIX, m4_if(m4_eval(_CLIENT_VERSION_BUILD < 25), 1, _CLIENT_VERSION_REVISION-beta$1, m4_eval(_CLIENT_VERSION_BUILD < 50), 1, _CLIENT_VERSION_REVISION-rc$1, m4_eval(_CLIENT_VERSION_BUILD == 50), 1, _CLIENT_VERSION_REVISION, _CLIENT_VERSION_REVISION-$1)))
@@ -164,6 +164,12 @@ AC_ARG_ENABLE([zmq],
 
 AC_ARG_WITH([protoc-bindir],[AS_HELP_STRING([--with-protoc-bindir=BIN_DIR],[specify protoc bin path])], [protoc_bin_path=$withval], [])
 
+AC_ARG_ENABLE(man,
+    [AS_HELP_STRING([--disable-man],
+                    [do not install man pages (default is to install)])],,
+    enable_man=yes)
+AM_CONDITIONAL(ENABLE_MAN, test "$enable_man" != no)
+
 # Enable debug
 AC_ARG_ENABLE([debug],
     [AS_HELP_STRING([--enable-debug],
@@ -172,12 +178,13 @@ AC_ARG_ENABLE([debug],
     [enable_debug=no])
 
 if test "x$enable_debug" = xyes; then
+    CPPFLAGS="$CPPFLAGS -DDEBUG -DDEBUG_LOCKORDER"
     if test "x$GCC" = xyes; then
-        CFLAGS="-g3 -O0 -DDEBUG"
+        CFLAGS="$CFLAGS -g3 -O0"
     fi
 
     if test "x$GXX" = xyes; then
-        CXXFLAGS="-g3 -O0 -DDEBUG"
+        CXXFLAGS="$CXXFLAGS -g3 -O0"
     fi
 fi
 
@@ -187,7 +194,7 @@ fi
 if test "x$CXXFLAGS_overridden" = "xno"; then
   CXXFLAGS="$CXXFLAGS -Wall -Wextra -Wformat -Wformat-security -Wno-unused-parameter -Wno-self-assign"
 fi
-CPPFLAGS="$CPPFLAGS -DBOOST_SPIRIT_THREADSAFE -DHAVE_BUILD_INFO -D__STDC_FORMAT_MACROS"
+CPPFLAGS="$CPPFLAGS -DHAVE_BUILD_INFO -D__STDC_FORMAT_MACROS"
 
 AC_ARG_WITH([utils],
   [AS_HELP_STRING([--with-utils],
@@ -975,7 +982,7 @@ AC_SUBST(GMP_LIBS)
 AC_SUBST(GMPXX_LIBS)
 AC_SUBST(LIBSNARK_LIBS)
 AC_SUBST(LIBDWCASH_LIBS)
-AC_CONFIG_FILES([Makefile src/Makefile share/setup.nsi share/qt/Info.plist src/test/buildenv.py])
+AC_CONFIG_FILES([Makefile src/Makefile doc/man/Makefile share/setup.nsi share/qt/Info.plist src/test/buildenv.py])
 AC_CONFIG_FILES([qa/pull-tester/run-bitcoind-for-test.sh],[chmod +x qa/pull-tester/run-bitcoind-for-test.sh])
 AC_CONFIG_FILES([qa/pull-tester/tests-config.sh],[chmod +x qa/pull-tester/tests-config.sh])
 

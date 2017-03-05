@@ -65,9 +65,10 @@ static const size_t SETASKFOR_MAX_SZ = 2 * MAX_INV_SZ;
 unsigned int ReceiveFloodSize();
 unsigned int SendBufferSize();
 
-void AddOneShot(std::string strDest);
+void AddOneShot(const std::string& strDest);
 void AddressCurrentlyConnected(const CService& addr);
 CNode* FindNode(const CNetAddr& ip);
+CNode* FindNode(const CSubNet& subNet);
 CNode* FindNode(const std::string& addrName);
 CNode* FindNode(const CService& ip);
 CNode* ConnectNode(CAddress addrConnect, const char *pszDest = NULL);
@@ -288,7 +289,7 @@ protected:
 
     // Denial-of-service detection/prevention
     // Key is IP address, value is banned-until-time
-    static std::map<CNetAddr, int64_t> setBanned;
+    static std::map<CSubNet, int64_t> setBanned;
     static CCriticalSection cs_setBanned;
 
     // Whitelisted ranges. Any node connecting from these is automatically
@@ -328,7 +329,7 @@ public:
     // Whether a ping is requested.
     bool fPingQueued;
 
-    CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn=false);
+    CNode(SOCKET hSocketIn, const CAddress &addrIn, const std::string &addrNameIn = "", bool fInboundIn = false);
     ~CNode();
 
 private:
@@ -613,7 +614,13 @@ public:
     // new code.
     static void ClearBanned(); // needed for unit testing
     static bool IsBanned(CNetAddr ip);
-    static bool Ban(const CNetAddr &ip);
+    static bool IsBanned(CSubNet subnet);
+    static void Ban(const CNetAddr &ip, int64_t bantimeoffset = 0, bool sinceUnixEpoch = false);
+    static void Ban(const CSubNet &subNet, int64_t bantimeoffset = 0, bool sinceUnixEpoch = false);
+    static bool Unban(const CNetAddr &ip);
+    static bool Unban(const CSubNet &ip);
+    static void GetBanned(std::map<CSubNet, int64_t> &banmap);
+
     void copyStats(CNodeStats &stats);
 
     static bool IsWhitelistedRange(const CNetAddr &ip);
