@@ -1,5 +1,5 @@
 ---
-name: "dwcash-1.0.7"
+name: "dwcash-1.0.7-1"
 enable_cache: true
 distro: "debian"
 suites:
