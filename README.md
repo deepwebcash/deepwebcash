@@ -1,4 +1,4 @@
-DeepWebCash 1.0.7-1
+DeepWebCash 1.0.8-1
 =============
 
 What is DeepWebCash?

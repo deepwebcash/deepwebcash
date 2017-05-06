@@ -271,6 +271,16 @@ BOOST_AUTO_TEST_CASE(rpc_wallet)
     obj = retValue.get_obj();
     BOOST_CHECK_EQUAL(find_value(obj, "miner").get_real(), 3.125);
     BOOST_CHECK_EQUAL(find_value(obj, "founders").get_real(), 0.0);
+
+    /*
+     * getblock
+     */
+    BOOST_CHECK_THROW(CallRPC("getblock too many args"), runtime_error);
+    BOOST_CHECK_THROW(CallRPC("getblock -1"), runtime_error);
+    BOOST_CHECK_THROW(CallRPC("getblock 2147483647"), runtime_error); // allowed, but > height of active chain tip
+    BOOST_CHECK_THROW(CallRPC("getblock 2147483648"), runtime_error); // not allowed, > int32 used for nHeight
+    BOOST_CHECK_THROW(CallRPC("getblock 100badchars"), runtime_error);
+    BOOST_CHECK_NO_THROW(CallRPC("getblock 0"));
 }
 
 BOOST_AUTO_TEST_CASE(rpc_wallet_getbalance)
@@ -500,8 +510,16 @@ BOOST_AUTO_TEST_CASE(rpc_wallet_z_importexport)
     BOOST_CHECK_THROW(CallRPC("z_exportkey"), runtime_error);   
 
     // error if too many args
-    BOOST_CHECK_THROW(CallRPC("z_importkey too many args"), runtime_error);
+    BOOST_CHECK_THROW(CallRPC("z_importkey way too many args"), runtime_error);
     BOOST_CHECK_THROW(CallRPC("z_exportkey toomany args"), runtime_error);
+
+    // error if invalid args
+    auto sk = libdwcash::SpendingKey::random();
+    std::string prefix = std::string("z_importkey ") + CZCSpendingKey(sk).ToString() + " yes ";
+    BOOST_CHECK_THROW(CallRPC(prefix + "-1"), runtime_error);
+    BOOST_CHECK_THROW(CallRPC(prefix + "2147483647"), runtime_error); // allowed, but > height of active chain tip
+    BOOST_CHECK_THROW(CallRPC(prefix + "2147483648"), runtime_error); // not allowed, > int32 used for nHeight
+    BOOST_CHECK_THROW(CallRPC(prefix + "100badchars"), runtime_error);
 
     // wallet should currently be empty
     std::set<libdwcash::PaymentAddress> addrs;
