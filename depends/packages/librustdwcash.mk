@@ -1,6 +1,6 @@
 package=librustdwcash
 $(package)_version=0.1
-$(package)_download_path=https://github.com/dwcash/$(package)/archive/
+$(package)_download_path=https://github.com/deepwebcash/$(package)/archive/
 $(package)_file_name=$(package)-$($(package)_git_commit).tar.gz
 $(package)_download_file=$($(package)_git_commit).tar.gz
 $(package)_sha256_hash=a5760a90d4a1045c8944204f29fa2a3cf2f800afee400f88bf89bbfe2cce1279
