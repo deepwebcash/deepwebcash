@@ -1,4 +1,4 @@
-rust_packages := rust librustdwcash
+rust_packages := rust librustzcash
 proton_packages := proton
 dwcash_packages := libsnark libgmp libsodium
 packages := boost openssl libevent zeromq $(dwcash_packages) googletest googlemock
