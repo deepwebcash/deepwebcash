@@ -1,4 +1,4 @@
-// Copyright (c) 2012-2013 The Bitcoin Core developers
+// Copyright (c) 2012-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -6,84 +6,56 @@
 #include "streams.h"
 #include "hash.h"
 #include "test/test_bitcoin.h"
-#include "utilstrencodings.h"
 
 #include <stdint.h>
 
 #include <boost/test/unit_test.hpp>
-#include <boost/optional.hpp>
-
-using namespace std;
-
-
-template<typename T>
-void check_ser_rep(T thing, std::vector<unsigned char> expected)
-{
-    CDataStream ss(SER_DISK, 0);
-    ss << thing;
-
-    BOOST_CHECK(GetSerializeSize(thing, 0, 0) == ss.size());
-
-    std::vector<unsigned char> serialized_representation(ss.begin(), ss.end());
-
-    BOOST_CHECK(serialized_representation == expected);
-
-    T thing_deserialized;
-    ss >> thing_deserialized;
-
-    BOOST_CHECK(thing_deserialized == thing);
-}
 
 BOOST_FIXTURE_TEST_SUITE(serialize_tests, BasicTestingSetup)
 
-BOOST_AUTO_TEST_CASE(boost_optional)
+class CSerializeMethodsTestSingle
 {
-    check_ser_rep<boost::optional<unsigned char>>(0xff, {0x01, 0xff});
-    check_ser_rep<boost::optional<unsigned char>>(boost::none, {0x00});
-    check_ser_rep<boost::optional<std::string>>(std::string("Test"), {0x01, 0x04, 'T', 'e', 's', 't'});
+protected:
+    int intval;
+    bool boolval;
+    std::string stringval;
+    const char* charstrval;
+    CTransactionRef txval;
+public:
+    CSerializeMethodsTestSingle() = default;
+    CSerializeMethodsTestSingle(int intvalin, bool boolvalin, std::string stringvalin, const char* charstrvalin, CTransaction txvalin) : intval(intvalin), boolval(boolvalin), stringval(std::move(stringvalin)), charstrval(charstrvalin), txval(MakeTransactionRef(txvalin)){}
+    ADD_SERIALIZE_METHODS;
 
-    {
-        // Ensure that canonical optional discriminant is used
-        CDataStream ss(SER_DISK, 0);
-        ss.write("\x02\x04Test", 6);
-        boost::optional<std::string> into;
-
-        BOOST_CHECK_THROW(ss >> into, std::ios_base::failure);
-    }
-}
-
-BOOST_AUTO_TEST_CASE(boost_arrays)
-{
-    boost::array<std::string, 2> test_case = {string("zub"), string("baz")};
-    CDataStream ss(SER_DISK, 0);
-    ss << test_case;
-
-    auto hash = Hash(ss.begin(), ss.end());
-
-    BOOST_CHECK_MESSAGE("037a75620362617a" == HexStr(ss.begin(), ss.end()), HexStr(ss.begin(), ss.end()));
-    BOOST_CHECK_MESSAGE(hash == uint256S("13cb12b2dd098dced0064fe4897c97f907ba3ed36ae470c2e7fc2b1111eba35a"), "actually got: " << hash.ToString());
-
-    {
-        // note: boost array of size 2 should serialize to be the same as a tuple
-        std::pair<std::string, std::string> test_case_2 = {string("zub"), string("baz")};
-
-        CDataStream ss2(SER_DISK, 0);
-        ss2 << test_case_2;
-
-        auto hash2 = Hash(ss2.begin(), ss2.end());
-
-        BOOST_CHECK(hash == hash2);
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(intval);
+        READWRITE(boolval);
+        READWRITE(stringval);
+        READWRITE(FLATDATA(charstrval));
+        READWRITE(txval);
     }
 
-    boost::array<std::string, 2> decoded_test_case;
-    ss >> decoded_test_case;
+    bool operator==(const CSerializeMethodsTestSingle& rhs)
+    {
+        return  intval == rhs.intval && \
+                boolval == rhs.boolval && \
+                stringval == rhs.stringval && \
+                strcmp(charstrval, rhs.charstrval) == 0 && \
+                *txval == *rhs.txval;
+    }
+};
 
-    BOOST_CHECK(decoded_test_case == test_case);
+class CSerializeMethodsTestMany : public CSerializeMethodsTestSingle
+{
+public:
+    using CSerializeMethodsTestSingle::CSerializeMethodsTestSingle;
+    ADD_SERIALIZE_METHODS;
 
-    boost::array<int32_t, 2> test = {100, 200};
-
-    BOOST_CHECK_EQUAL(GetSerializeSize(test, 0, 0), 8);
-}
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITEMANY(intval, boolval, stringval, FLATDATA(charstrval), txval);
+    }
+};
 
 BOOST_AUTO_TEST_CASE(sizes)
 {
@@ -118,7 +90,7 @@ BOOST_AUTO_TEST_CASE(sizes)
 
 BOOST_AUTO_TEST_CASE(floats_conversion)
 {
-    // Choose values that map unambigiously to binary floating point to avoid
+    // Choose values that map unambiguously to binary floating point to avoid
     // rounding issues at the compiler side.
     BOOST_CHECK_EQUAL(ser_uint32_to_float(0x00000000), 0.0F);
     BOOST_CHECK_EQUAL(ser_uint32_to_float(0x3f000000), 0.5F);
@@ -137,7 +109,7 @@ BOOST_AUTO_TEST_CASE(floats_conversion)
 
 BOOST_AUTO_TEST_CASE(doubles_conversion)
 {
-    // Choose values that map unambigiously to binary floating point to avoid
+    // Choose values that map unambiguously to binary floating point to avoid
     // rounding issues at the compiler side.
     BOOST_CHECK_EQUAL(ser_uint64_to_double(0x0000000000000000ULL), 0.0);
     BOOST_CHECK_EQUAL(ser_uint64_to_double(0x3fe0000000000000ULL), 0.5);
@@ -230,10 +202,31 @@ BOOST_AUTO_TEST_CASE(varints)
     }
 }
 
+BOOST_AUTO_TEST_CASE(varints_bitpatterns)
+{
+    CDataStream ss(SER_DISK, 0);
+    ss << VARINT(0); BOOST_CHECK_EQUAL(HexStr(ss), "00"); ss.clear();
+    ss << VARINT(0x7f); BOOST_CHECK_EQUAL(HexStr(ss), "7f"); ss.clear();
+    ss << VARINT((int8_t)0x7f); BOOST_CHECK_EQUAL(HexStr(ss), "7f"); ss.clear();
+    ss << VARINT(0x80); BOOST_CHECK_EQUAL(HexStr(ss), "8000"); ss.clear();
+    ss << VARINT((uint8_t)0x80); BOOST_CHECK_EQUAL(HexStr(ss), "8000"); ss.clear();
+    ss << VARINT(0x1234); BOOST_CHECK_EQUAL(HexStr(ss), "a334"); ss.clear();
+    ss << VARINT((int16_t)0x1234); BOOST_CHECK_EQUAL(HexStr(ss), "a334"); ss.clear();
+    ss << VARINT(0xffff); BOOST_CHECK_EQUAL(HexStr(ss), "82fe7f"); ss.clear();
+    ss << VARINT((uint16_t)0xffff); BOOST_CHECK_EQUAL(HexStr(ss), "82fe7f"); ss.clear();
+    ss << VARINT(0x123456); BOOST_CHECK_EQUAL(HexStr(ss), "c7e756"); ss.clear();
+    ss << VARINT((int32_t)0x123456); BOOST_CHECK_EQUAL(HexStr(ss), "c7e756"); ss.clear();
+    ss << VARINT(0x80123456U); BOOST_CHECK_EQUAL(HexStr(ss), "86ffc7e756"); ss.clear();
+    ss << VARINT((uint32_t)0x80123456U); BOOST_CHECK_EQUAL(HexStr(ss), "86ffc7e756"); ss.clear();
+    ss << VARINT(0xffffffff); BOOST_CHECK_EQUAL(HexStr(ss), "8efefefe7f"); ss.clear();
+    ss << VARINT(0x7fffffffffffffffLL); BOOST_CHECK_EQUAL(HexStr(ss), "fefefefefefefefe7f"); ss.clear();
+    ss << VARINT(0xffffffffffffffffULL); BOOST_CHECK_EQUAL(HexStr(ss), "80fefefefefefefefe7f"); ss.clear();
+}
+
 BOOST_AUTO_TEST_CASE(compactsize)
 {
     CDataStream ss(SER_DISK, 0);
-    vector<char>::size_type i, j;
+    std::vector<char>::size_type i, j;
 
     for (i = 1; i <= MAX_SIZE; i *= 2)
     {
@@ -266,7 +259,7 @@ BOOST_AUTO_TEST_CASE(noncanonical)
     // Write some non-canonical CompactSize encodings, and
     // make sure an exception is thrown when read back.
     CDataStream ss(SER_DISK, 0);
-    vector<char>::size_type n;
+    std::vector<char>::size_type n;
 
     // zero encoded with three bytes:
     ss.write("\xfd\x00\x00", 3);
@@ -344,6 +337,32 @@ BOOST_AUTO_TEST_CASE(insert_delete)
     CSerializeData d;
     ss.GetAndClear(d);
     BOOST_CHECK_EQUAL(ss.size(), 0);
+}
+
+BOOST_AUTO_TEST_CASE(class_methods)
+{
+    int intval(100);
+    bool boolval(true);
+    std::string stringval("testing");
+    const char* charstrval("testing charstr");
+    CMutableTransaction txval;
+    CSerializeMethodsTestSingle methodtest1(intval, boolval, stringval, charstrval, txval);
+    CSerializeMethodsTestMany methodtest2(intval, boolval, stringval, charstrval, txval);
+    CSerializeMethodsTestSingle methodtest3;
+    CSerializeMethodsTestMany methodtest4;
+    CDataStream ss(SER_DISK, PROTOCOL_VERSION);
+    BOOST_CHECK(methodtest1 == methodtest2);
+    ss << methodtest1;
+    ss >> methodtest4;
+    ss << methodtest2;
+    ss >> methodtest3;
+    BOOST_CHECK(methodtest1 == methodtest2);
+    BOOST_CHECK(methodtest2 == methodtest3);
+    BOOST_CHECK(methodtest3 == methodtest4);
+
+    CDataStream ss2(SER_DISK, PROTOCOL_VERSION, intval, boolval, stringval, FLATDATA(charstrval), txval);
+    ss2 >> methodtest3;
+    BOOST_CHECK(methodtest3 == methodtest4);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

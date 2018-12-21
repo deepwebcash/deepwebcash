@@ -1,5 +1,10 @@
-DeepWebCash 1.0.8-1
+DeepWebCash 4.1.1
 =============
+
+Reborn
+--------------
+DeepWebCash was reset at Dec. 2018.
+
 
 What is DeepWebCash?
 --------------

@@ -1,18 +1,20 @@
-// Copyright (c) 2013 The Bitcoin Core developers
+// Copyright (c) 2013-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "consensus/validation.h"
 #include "data/sighash.json.h"
-#include "main.h"
-#include "random.h"
+#include "hash.h"
+#include "validation.h" // For CheckTransaction
 #include "script/interpreter.h"
 #include "script/script.h"
 #include "serialize.h"
+#include "streams.h"
 #include "test/test_bitcoin.h"
+#include "test/test_random.h"
 #include "util.h"
+#include "utilstrencodings.h"
 #include "version.h"
-#include "sodium.h"
 
 #include <iostream>
 
@@ -32,6 +34,10 @@ uint256 static SignatureHashOld(CScript scriptCode, const CTransaction& txTo, un
         return one;
     }
     CMutableTransaction txTmp(txTo);
+
+    // In case concatenating two scripts ends up with two codeseparators,
+    // or an extra one at the end, this prevents all those possible incompatibilities.
+    scriptCode.FindAndDelete(CScript(OP_CODESEPARATOR));
 
     // Blank out other inputs' signatures
     for (unsigned int i = 0; i < txTmp.vin.size(); i++)
@@ -75,17 +81,14 @@ uint256 static SignatureHashOld(CScript scriptCode, const CTransaction& txTo, un
         txTmp.vin.resize(1);
     }
 
-    // Blank out the joinsplit signature.
-    memset(&txTmp.joinSplitSig[0], 0, txTmp.joinSplitSig.size());
-
     // Serialize and hash
-    CHashWriter ss(SER_GETHASH, 0);
+    CHashWriter ss(SER_GETHASH, SERIALIZE_TRANSACTION_NO_WITNESS);
     ss << txTmp << nHashType;
     return ss.GetHash();
 }
 
 void static RandomScript(CScript &script) {
-    static const opcodetype oplist[] = {OP_FALSE, OP_1, OP_2, OP_3, OP_CHECKSIG, OP_IF, OP_VERIF, OP_RETURN};
+    static const opcodetype oplist[] = {OP_FALSE, OP_1, OP_2, OP_3, OP_CHECKSIG, OP_IF, OP_VERIF, OP_RETURN, OP_CODESEPARATOR};
     script = CScript();
     int ops = (insecure_rand() % 10);
     for (int i=0; i<ops; i++)
@@ -99,7 +102,6 @@ void static RandomTransaction(CMutableTransaction &tx, bool fSingle) {
     tx.nLockTime = (insecure_rand() % 2) ? insecure_rand() : 0;
     int ins = (insecure_rand() % 4) + 1;
     int outs = fSingle ? ins : (insecure_rand() % 4) + 1;
-    int joinsplits = (insecure_rand() % 4);
     for (int in = 0; in < ins; in++) {
         tx.vin.push_back(CTxIn());
         CTxIn &txin = tx.vin.back();
@@ -113,42 +115,6 @@ void static RandomTransaction(CMutableTransaction &tx, bool fSingle) {
         CTxOut &txout = tx.vout.back();
         txout.nValue = insecure_rand() % 100000000;
         RandomScript(txout.scriptPubKey);
-    }
-    if (tx.nVersion >= 2) {
-        for (int js = 0; js < joinsplits; js++) {
-            JSDescription jsdesc;
-            if (insecure_rand() % 2 == 0) {
-                jsdesc.vpub_old = insecure_rand() % 100000000;
-            } else {
-                jsdesc.vpub_new = insecure_rand() % 100000000;
-            }
-
-            jsdesc.anchor = GetRandHash();
-            jsdesc.nullifiers[0] = GetRandHash();
-            jsdesc.nullifiers[1] = GetRandHash();
-            jsdesc.ephemeralKey = GetRandHash();
-            jsdesc.randomSeed = GetRandHash();
-            randombytes_buf(jsdesc.ciphertexts[0].begin(), jsdesc.ciphertexts[0].size());
-            randombytes_buf(jsdesc.ciphertexts[1].begin(), jsdesc.ciphertexts[1].size());
-            jsdesc.proof = libdwcash::ZCProof::random_invalid();
-            jsdesc.macs[0] = GetRandHash();
-            jsdesc.macs[1] = GetRandHash();
-
-            tx.vjoinsplit.push_back(jsdesc);
-        }
-
-        unsigned char joinSplitPrivKey[crypto_sign_SECRETKEYBYTES];
-        crypto_sign_keypair(tx.joinSplitPubKey.begin(), joinSplitPrivKey);
-
-        // Empty output script.
-        CScript scriptCode;
-        CTransaction signTx(tx);
-        uint256 dataToBeSigned = SignatureHash(scriptCode, signTx, NOT_AN_INPUT, SIGHASH_ALL);
-
-        assert(crypto_sign_detached(&tx.joinSplitSig[0], NULL,
-                                    dataToBeSigned.begin(), 32,
-                                    joinSplitPrivKey
-                                    ) == 0);
     }
 }
 
@@ -177,7 +143,7 @@ BOOST_AUTO_TEST_CASE(sighash_test)
 
         uint256 sh, sho;
         sho = SignatureHashOld(scriptCode, txTo, nIn, nHashType);
-        sh = SignatureHash(scriptCode, txTo, nIn, nHashType);
+        sh = SignatureHash(scriptCode, txTo, nIn, nHashType, 0, SIGVERSION_BASE);
         #if defined(PRINT_SIGHASH_JSON)
         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
         ss << txTo;
@@ -205,7 +171,7 @@ BOOST_AUTO_TEST_CASE(sighash_from_data)
 {
     UniValue tests = read_json(std::string(json_tests::sighash, json_tests::sighash + sizeof(json_tests::sighash)));
 
-    for (size_t idx = 0; idx < tests.size(); idx++) {
+    for (unsigned int idx = 0; idx < tests.size(); idx++) {
         UniValue test = tests[idx];
         std::string strTest = test.write();
         if (test.size() < 1) // Allow for extra stuff (useful for comments)
@@ -218,7 +184,7 @@ BOOST_AUTO_TEST_CASE(sighash_from_data)
         std::string raw_tx, raw_script, sigHashHex;
         int nIn, nHashType;
         uint256 sh;
-        CTransaction tx;
+        CTransactionRef tx;
         CScript scriptCode = CScript();
 
         try {
@@ -229,19 +195,12 @@ BOOST_AUTO_TEST_CASE(sighash_from_data)
           nHashType = test[3].get_int();
           sigHashHex = test[4].get_str();
 
-          uint256 sh;
           CDataStream stream(ParseHex(raw_tx), SER_NETWORK, PROTOCOL_VERSION);
           stream >> tx;
 
           CValidationState state;
-          if (tx.nVersion < MIN_TX_VERSION) {
-              // Transaction must be invalid
-              BOOST_CHECK_MESSAGE(!CheckTransactionWithoutProofVerification(tx, state), strTest);
-              BOOST_CHECK(!state.IsValid());
-          } else {
-              BOOST_CHECK_MESSAGE(CheckTransactionWithoutProofVerification(tx, state), strTest);
-              BOOST_CHECK(state.IsValid());
-          }
+          BOOST_CHECK_MESSAGE(CheckTransaction(*tx, state), strTest);
+          BOOST_CHECK(state.IsValid());
 
           std::vector<unsigned char> raw = ParseHex(raw_script);
           scriptCode.insert(scriptCode.end(), raw.begin(), raw.end());
@@ -250,7 +209,7 @@ BOOST_AUTO_TEST_CASE(sighash_from_data)
           continue;
         }
 
-        sh = SignatureHash(scriptCode, tx, nIn, nHashType);
+        sh = SignatureHash(scriptCode, *tx, nIn, nHashType, 0, SIGVERSION_BASE);
         BOOST_CHECK_MESSAGE(sh.GetHex() == sigHashHex, strTest);
     }
 }

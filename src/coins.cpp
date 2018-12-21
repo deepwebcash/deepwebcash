@@ -1,4 +1,4 @@
-// Copyright (c) 2012-2014 The Bitcoin Core developers
+// Copyright (c) 2012-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -6,8 +6,6 @@
 
 #include "memusage.h"
 #include "random.h"
-#include "version.h"
-#include "policy/fees.h"
 
 #include <assert.h>
 
@@ -42,37 +40,23 @@ bool CCoins::Spend(uint32_t nPos)
     Cleanup();
     return true;
 }
-bool CCoinsView::GetAnchorAt(const uint256 &rt, ZCIncrementalMerkleTree &tree) const { return false; }
-bool CCoinsView::GetNullifier(const uint256 &nullifier) const { return false; }
+
 bool CCoinsView::GetCoins(const uint256 &txid, CCoins &coins) const { return false; }
 bool CCoinsView::HaveCoins(const uint256 &txid) const { return false; }
 uint256 CCoinsView::GetBestBlock() const { return uint256(); }
-uint256 CCoinsView::GetBestAnchor() const { return uint256(); };
-bool CCoinsView::BatchWrite(CCoinsMap &mapCoins,
-                            const uint256 &hashBlock,
-                            const uint256 &hashAnchor,
-                            CAnchorsMap &mapAnchors,
-                            CNullifiersMap &mapNullifiers) { return false; }
-bool CCoinsView::GetStats(CCoinsStats &stats) const { return false; }
+bool CCoinsView::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock) { return false; }
+CCoinsViewCursor *CCoinsView::Cursor() const { return 0; }
 
 
 CCoinsViewBacked::CCoinsViewBacked(CCoinsView *viewIn) : base(viewIn) { }
-
-bool CCoinsViewBacked::GetAnchorAt(const uint256 &rt, ZCIncrementalMerkleTree &tree) const { return base->GetAnchorAt(rt, tree); }
-bool CCoinsViewBacked::GetNullifier(const uint256 &nullifier) const { return base->GetNullifier(nullifier); }
 bool CCoinsViewBacked::GetCoins(const uint256 &txid, CCoins &coins) const { return base->GetCoins(txid, coins); }
 bool CCoinsViewBacked::HaveCoins(const uint256 &txid) const { return base->HaveCoins(txid); }
 uint256 CCoinsViewBacked::GetBestBlock() const { return base->GetBestBlock(); }
-uint256 CCoinsViewBacked::GetBestAnchor() const { return base->GetBestAnchor(); }
 void CCoinsViewBacked::SetBackend(CCoinsView &viewIn) { base = &viewIn; }
-bool CCoinsViewBacked::BatchWrite(CCoinsMap &mapCoins,
-                                  const uint256 &hashBlock,
-                                  const uint256 &hashAnchor,
-                                  CAnchorsMap &mapAnchors,
-                                  CNullifiersMap &mapNullifiers) { return base->BatchWrite(mapCoins, hashBlock, hashAnchor, mapAnchors, mapNullifiers); }
-bool CCoinsViewBacked::GetStats(CCoinsStats &stats) const { return base->GetStats(stats); }
+bool CCoinsViewBacked::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock) { return base->BatchWrite(mapCoins, hashBlock); }
+CCoinsViewCursor *CCoinsViewBacked::Cursor() const { return base->Cursor(); }
 
-CCoinsKeyHasher::CCoinsKeyHasher() : salt(GetRandHash()) {}
+SaltedTxidHasher::SaltedTxidHasher() : k0(GetRand(std::numeric_limits<uint64_t>::max())), k1(GetRand(std::numeric_limits<uint64_t>::max())) {}
 
 CCoinsViewCache::CCoinsViewCache(CCoinsView *baseIn) : CCoinsViewBacked(baseIn), hasModifier(false), cachedCoinsUsage(0) { }
 
@@ -82,10 +66,7 @@ CCoinsViewCache::~CCoinsViewCache()
 }
 
 size_t CCoinsViewCache::DynamicMemoryUsage() const {
-    return memusage::DynamicUsage(cacheCoins) +
-           memusage::DynamicUsage(cacheAnchors) +
-           memusage::DynamicUsage(cacheNullifiers) +
-           cachedCoinsUsage;
+    return memusage::DynamicUsage(cacheCoins) + cachedCoinsUsage;
 }
 
 CCoinsMap::const_iterator CCoinsViewCache::FetchCoins(const uint256 &txid) const {
@@ -104,102 +85,6 @@ CCoinsMap::const_iterator CCoinsViewCache::FetchCoins(const uint256 &txid) const
     }
     cachedCoinsUsage += ret->second.coins.DynamicMemoryUsage();
     return ret;
-}
-
-
-bool CCoinsViewCache::GetAnchorAt(const uint256 &rt, ZCIncrementalMerkleTree &tree) const {
-    CAnchorsMap::const_iterator it = cacheAnchors.find(rt);
-    if (it != cacheAnchors.end()) {
-        if (it->second.entered) {
-            tree = it->second.tree;
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    if (!base->GetAnchorAt(rt, tree)) {
-        return false;
-    }
-
-    CAnchorsMap::iterator ret = cacheAnchors.insert(std::make_pair(rt, CAnchorsCacheEntry())).first;
-    ret->second.entered = true;
-    ret->second.tree = tree;
-    cachedCoinsUsage += ret->second.tree.DynamicMemoryUsage();
-
-    return true;
-}
-
-bool CCoinsViewCache::GetNullifier(const uint256 &nullifier) const {
-    CNullifiersMap::iterator it = cacheNullifiers.find(nullifier);
-    if (it != cacheNullifiers.end())
-        return it->second.entered;
-
-    CNullifiersCacheEntry entry;
-    bool tmp = base->GetNullifier(nullifier);
-    entry.entered = tmp;
-
-    cacheNullifiers.insert(std::make_pair(nullifier, entry));
-
-    return tmp;
-}
-
-void CCoinsViewCache::PushAnchor(const ZCIncrementalMerkleTree &tree) {
-    uint256 newrt = tree.root();
-
-    auto currentRoot = GetBestAnchor();
-
-    // We don't want to overwrite an anchor we already have.
-    // This occurs when a block doesn't modify mapAnchors at all,
-    // because there are no joinsplits. We could get around this a
-    // different way (make all blocks modify mapAnchors somehow)
-    // but this is simpler to reason about.
-    if (currentRoot != newrt) {
-        auto insertRet = cacheAnchors.insert(std::make_pair(newrt, CAnchorsCacheEntry()));
-        CAnchorsMap::iterator ret = insertRet.first;
-
-        ret->second.entered = true;
-        ret->second.tree = tree;
-        ret->second.flags = CAnchorsCacheEntry::DIRTY;
-
-        if (insertRet.second) {
-            // An insert took place
-            cachedCoinsUsage += ret->second.tree.DynamicMemoryUsage();
-        }
-
-        hashAnchor = newrt;
-    }
-}
-
-void CCoinsViewCache::PopAnchor(const uint256 &newrt) {
-    auto currentRoot = GetBestAnchor();
-
-    // Blocks might not change the commitment tree, in which
-    // case restoring the "old" anchor during a reorg must
-    // have no effect.
-    if (currentRoot != newrt) {
-        // Bring the current best anchor into our local cache
-        // so that its tree exists in memory.
-        {
-            ZCIncrementalMerkleTree tree;
-            assert(GetAnchorAt(currentRoot, tree));
-        }
-
-        // Mark the anchor as unentered, removing it from view
-        cacheAnchors[currentRoot].entered = false;
-
-        // Mark the cache entry as dirty so it's propagated
-        cacheAnchors[currentRoot].flags = CAnchorsCacheEntry::DIRTY;
-
-        // Mark the new root as the best anchor
-        hashAnchor = newrt;
-    }
-}
-
-void CCoinsViewCache::SetNullifier(const uint256 &nullifier, bool spent) {
-    std::pair<CNullifiersMap::iterator, bool> ret = cacheNullifiers.insert(std::make_pair(nullifier, CNullifiersCacheEntry()));
-    ret.first->second.entered = spent;
-    ret.first->second.flags |= CNullifiersCacheEntry::DIRTY;
 }
 
 bool CCoinsViewCache::GetCoins(const uint256 &txid, CCoins &coins) const {
@@ -232,6 +117,41 @@ CCoinsModifier CCoinsViewCache::ModifyCoins(const uint256 &txid) {
     return CCoinsModifier(*this, ret.first, cachedCoinUsage);
 }
 
+/* ModifyNewCoins allows for faster coin modification when creating the new
+ * outputs from a transaction.  It assumes that BIP 30 (no duplicate txids)
+ * applies and has already been tested for (or the test is not required due to
+ * BIP 34, height in coinbase).  If we can assume BIP 30 then we know that any
+ * non-coinbase transaction we are adding to the UTXO must not already exist in
+ * the utxo unless it is fully spent.  Thus we can check only if it exists DIRTY
+ * at the current level of the cache, in which case it is not safe to mark it
+ * FRESH (b/c then its spentness still needs to flushed).  If it's not dirty and
+ * doesn't exist or is pruned in the current cache, we know it either doesn't
+ * exist or is pruned in parent caches, which is the definition of FRESH.  The
+ * exception to this is the two historical violations of BIP 30 in the chain,
+ * both of which were coinbases.  We do not mark these fresh so we we can ensure
+ * that they will still be properly overwritten when spent.
+ */
+CCoinsModifier CCoinsViewCache::ModifyNewCoins(const uint256 &txid, bool coinbase) {
+    assert(!hasModifier);
+    std::pair<CCoinsMap::iterator, bool> ret = cacheCoins.insert(std::make_pair(txid, CCoinsCacheEntry()));
+    if (!coinbase) {
+        // New coins must not already exist.
+        if (!ret.first->second.coins.IsPruned())
+            throw std::logic_error("ModifyNewCoins should not find pre-existing coins on a non-coinbase unless they are pruned!");
+
+        if (!(ret.first->second.flags & CCoinsCacheEntry::DIRTY)) {
+            // If the coin is known to be pruned (have no unspent outputs) in
+            // the current view and the cache entry is not dirty, we know the
+            // coin also must be pruned in the parent view as well, so it is safe
+            // to mark this fresh.
+            ret.first->second.flags |= CCoinsCacheEntry::FRESH;
+        }
+    }
+    ret.first->second.coins.Clear();
+    ret.first->second.flags |= CCoinsCacheEntry::DIRTY;
+    return CCoinsModifier(*this, ret.first, 0);
+}
+
 const CCoins* CCoinsViewCache::AccessCoins(const uint256 &txid) const {
     CCoinsMap::const_iterator it = FetchCoins(txid);
     if (it == cacheCoins.end()) {
@@ -250,45 +170,51 @@ bool CCoinsViewCache::HaveCoins(const uint256 &txid) const {
     return (it != cacheCoins.end() && !it->second.coins.vout.empty());
 }
 
+bool CCoinsViewCache::HaveCoinsInCache(const uint256 &txid) const {
+    CCoinsMap::const_iterator it = cacheCoins.find(txid);
+    return it != cacheCoins.end();
+}
+
 uint256 CCoinsViewCache::GetBestBlock() const {
     if (hashBlock.IsNull())
         hashBlock = base->GetBestBlock();
     return hashBlock;
 }
 
-
-uint256 CCoinsViewCache::GetBestAnchor() const {
-    if (hashAnchor.IsNull())
-        hashAnchor = base->GetBestAnchor();
-    return hashAnchor;
-}
-
 void CCoinsViewCache::SetBestBlock(const uint256 &hashBlockIn) {
     hashBlock = hashBlockIn;
 }
 
-bool CCoinsViewCache::BatchWrite(CCoinsMap &mapCoins,
-                                 const uint256 &hashBlockIn,
-                                 const uint256 &hashAnchorIn,
-                                 CAnchorsMap &mapAnchors,
-                                 CNullifiersMap &mapNullifiers) {
+bool CCoinsViewCache::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlockIn) {
     assert(!hasModifier);
     for (CCoinsMap::iterator it = mapCoins.begin(); it != mapCoins.end();) {
         if (it->second.flags & CCoinsCacheEntry::DIRTY) { // Ignore non-dirty entries (optimization).
             CCoinsMap::iterator itUs = cacheCoins.find(it->first);
             if (itUs == cacheCoins.end()) {
-                if (!it->second.coins.IsPruned()) {
-                    // The parent cache does not have an entry, while the child
-                    // cache does have (a non-pruned) one. Move the data up, and
-                    // mark it as fresh (if the grandparent did have it, we
-                    // would have pulled it in at first GetCoins).
-                    assert(it->second.flags & CCoinsCacheEntry::FRESH);
+                // The parent cache does not have an entry, while the child does
+                // We can ignore it if it's both FRESH and pruned in the child
+                if (!(it->second.flags & CCoinsCacheEntry::FRESH && it->second.coins.IsPruned())) {
+                    // Otherwise we will need to create it in the parent
+                    // and move the data up and mark it as dirty
                     CCoinsCacheEntry& entry = cacheCoins[it->first];
                     entry.coins.swap(it->second.coins);
                     cachedCoinsUsage += entry.coins.DynamicMemoryUsage();
-                    entry.flags = CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH;
+                    entry.flags = CCoinsCacheEntry::DIRTY;
+                    // We can mark it FRESH in the parent if it was FRESH in the child
+                    // Otherwise it might have just been flushed from the parent's cache
+                    // and already exist in the grandparent
+                    if (it->second.flags & CCoinsCacheEntry::FRESH)
+                        entry.flags |= CCoinsCacheEntry::FRESH;
                 }
             } else {
+                // Assert that the child cache entry was not marked FRESH if the
+                // parent cache entry has unspent outputs. If this ever happens,
+                // it means the FRESH flag was misapplied and there is a logic
+                // error in the calling code.
+                if ((it->second.flags & CCoinsCacheEntry::FRESH) && !itUs->second.coins.IsPruned())
+                    throw std::logic_error("FRESH flag misapplied to cache entry for base transaction with spendable outputs");
+
+                // Found the entry in the parent cache
                 if ((itUs->second.flags & CCoinsCacheEntry::FRESH) && it->second.coins.IsPruned()) {
                     // The grandparent does not have an entry, and the child is
                     // modified and being pruned. This means we can just delete
@@ -301,70 +227,35 @@ bool CCoinsViewCache::BatchWrite(CCoinsMap &mapCoins,
                     itUs->second.coins.swap(it->second.coins);
                     cachedCoinsUsage += itUs->second.coins.DynamicMemoryUsage();
                     itUs->second.flags |= CCoinsCacheEntry::DIRTY;
+                    // NOTE: It is possible the child has a FRESH flag here in
+                    // the event the entry we found in the parent is pruned. But
+                    // we must not copy that FRESH flag to the parent as that
+                    // pruned state likely still needs to be communicated to the
+                    // grandparent.
                 }
             }
         }
         CCoinsMap::iterator itOld = it++;
         mapCoins.erase(itOld);
     }
-
-    for (CAnchorsMap::iterator child_it = mapAnchors.begin(); child_it != mapAnchors.end();)
-    {
-        if (child_it->second.flags & CAnchorsCacheEntry::DIRTY) {
-            CAnchorsMap::iterator parent_it = cacheAnchors.find(child_it->first);
-
-            if (parent_it == cacheAnchors.end()) {
-                CAnchorsCacheEntry& entry = cacheAnchors[child_it->first];
-                entry.entered = child_it->second.entered;
-                entry.tree = child_it->second.tree;
-                entry.flags = CAnchorsCacheEntry::DIRTY;
-
-                cachedCoinsUsage += entry.tree.DynamicMemoryUsage();
-            } else {
-                if (parent_it->second.entered != child_it->second.entered) {
-                    // The parent may have removed the entry.
-                    parent_it->second.entered = child_it->second.entered;
-                    parent_it->second.flags |= CAnchorsCacheEntry::DIRTY;
-                }
-            }
-        }
-
-        CAnchorsMap::iterator itOld = child_it++;
-        mapAnchors.erase(itOld);
-    }
-
-    for (CNullifiersMap::iterator child_it = mapNullifiers.begin(); child_it != mapNullifiers.end();)
-    {
-        if (child_it->second.flags & CNullifiersCacheEntry::DIRTY) { // Ignore non-dirty entries (optimization).
-            CNullifiersMap::iterator parent_it = cacheNullifiers.find(child_it->first);
-
-            if (parent_it == cacheNullifiers.end()) {
-                CNullifiersCacheEntry& entry = cacheNullifiers[child_it->first];
-                entry.entered = child_it->second.entered;
-                entry.flags = CNullifiersCacheEntry::DIRTY;
-            } else {
-                if (parent_it->second.entered != child_it->second.entered) {
-                    parent_it->second.entered = child_it->second.entered;
-                    parent_it->second.flags |= CNullifiersCacheEntry::DIRTY;
-                }
-            }
-        }
-        CNullifiersMap::iterator itOld = child_it++;
-        mapNullifiers.erase(itOld);
-    }
-
-    hashAnchor = hashAnchorIn;
     hashBlock = hashBlockIn;
     return true;
 }
 
 bool CCoinsViewCache::Flush() {
-    bool fOk = base->BatchWrite(cacheCoins, hashBlock, hashAnchor, cacheAnchors, cacheNullifiers);
+    bool fOk = base->BatchWrite(cacheCoins, hashBlock);
     cacheCoins.clear();
-    cacheAnchors.clear();
-    cacheNullifiers.clear();
     cachedCoinsUsage = 0;
     return fOk;
+}
+
+void CCoinsViewCache::Uncache(const uint256& hash)
+{
+    CCoinsMap::iterator it = cacheCoins.find(hash);
+    if (it != cacheCoins.end() && it->second.flags == 0) {
+        cachedCoinsUsage -= it->second.coins.DynamicMemoryUsage();
+        cacheCoins.erase(it);
+    }
 }
 
 unsigned int CCoinsViewCache::GetCacheSize() const {
@@ -387,43 +278,7 @@ CAmount CCoinsViewCache::GetValueIn(const CTransaction& tx) const
     for (unsigned int i = 0; i < tx.vin.size(); i++)
         nResult += GetOutputFor(tx.vin[i]).nValue;
 
-    nResult += tx.GetJoinSplitValueIn();
-
     return nResult;
-}
-
-bool CCoinsViewCache::HaveJoinSplitRequirements(const CTransaction& tx) const
-{
-    boost::unordered_map<uint256, ZCIncrementalMerkleTree, CCoinsKeyHasher> intermediates;
-
-    BOOST_FOREACH(const JSDescription &joinsplit, tx.vjoinsplit)
-    {
-        BOOST_FOREACH(const uint256& nullifier, joinsplit.nullifiers)
-        {
-            if (GetNullifier(nullifier)) {
-                // If the nullifier is set, this transaction
-                // double-spends!
-                return false;
-            }
-        }
-
-        ZCIncrementalMerkleTree tree;
-        auto it = intermediates.find(joinsplit.anchor);
-        if (it != intermediates.end()) {
-            tree = it->second;
-        } else if (!GetAnchorAt(joinsplit.anchor, tree)) {
-            return false;
-        }
-
-        BOOST_FOREACH(const uint256& commitment, joinsplit.commitments)
-        {
-            tree.append(commitment);
-        }
-
-        intermediates.insert(std::make_pair(tree.root(), tree));
-    }
-
-    return true;
 }
 
 bool CCoinsViewCache::HaveInputs(const CTransaction& tx) const
@@ -440,32 +295,22 @@ bool CCoinsViewCache::HaveInputs(const CTransaction& tx) const
     return true;
 }
 
-double CCoinsViewCache::GetPriority(const CTransaction &tx, int nHeight) const
+double CCoinsViewCache::GetPriority(const CTransaction &tx, int nHeight, CAmount &inChainInputValue) const
 {
-    if (tx.IsCoinBase())
+    inChainInputValue = 0;
+    if (tx.IsCoinBase() || tx.IsCoinStake())
         return 0.0;
-
-    // Joinsplits do not reveal any information about the value or age of a note, so we
-    // cannot apply the priority algorithm used for transparent utxos.  Instead, we just
-    // use the maximum priority whenever a transaction contains any JoinSplits.
-    // (Note that coinbase transactions cannot contain JoinSplits.)
-    // FIXME: this logic is partially duplicated between here and CreateNewBlock in miner.cpp.
-
-    if (tx.vjoinsplit.size() > 0) {
-        return MAX_PRIORITY;
-    }
-
     double dResult = 0.0;
     BOOST_FOREACH(const CTxIn& txin, tx.vin)
     {
         const CCoins* coins = AccessCoins(txin.prevout.hash);
         assert(coins);
         if (!coins->IsAvailable(txin.prevout.n)) continue;
-        if (coins->nHeight < nHeight) {
-            dResult += coins->vout[txin.prevout.n].nValue * (nHeight-coins->nHeight);
+        if (coins->nHeight <= nHeight) {
+            dResult += (double)(coins->vout[txin.prevout.n].nValue) * (nHeight-coins->nHeight);
+            inChainInputValue += coins->vout[txin.prevout.n].nValue;
         }
     }
-
     return tx.ComputePriority(dResult);
 }
 
@@ -486,4 +331,8 @@ CCoinsModifier::~CCoinsModifier()
         // If the coin still exists after the modification, add the new usage
         cache.cachedCoinsUsage += it->second.coins.DynamicMemoryUsage();
     }
+}
+
+CCoinsViewCursor::~CCoinsViewCursor()
+{
 }

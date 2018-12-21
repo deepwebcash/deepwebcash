@@ -1,31 +1,37 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2014 The Bitcoin Core developers
+// Copyright (c) 2009-2018 The Bitcoin Core developers
+// Copyright (c) 2016-2019 The DeepWebCash developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BITCOIN_CONSENSUS_CONSENSUS_H
 #define BITCOIN_CONSENSUS_CONSENSUS_H
 
-/** The minimum allowed block version (network rule) */
-static const int32_t MIN_BLOCK_VERSION = 4;
-/** The minimum allowed transaction version (network rule) */
-static const int32_t MIN_TX_VERSION = 1;
-/** The maximum allowed size for a serialized block, in bytes (network rule) */
-static const unsigned int MAX_BLOCK_SIZE = 2000000;
+#include <stdint.h>
+
+static const unsigned int MAX_BLOCK_SIZE_SCALE = 4;
+
+/** The maximum allowed size for a serialized block, in bytes (only for buffer size limits) */
+static const unsigned int MAX_BLOCK_SERIALIZED_SIZE = 4000000 * MAX_BLOCK_SIZE_SCALE;
+/** The maximum allowed weight for a block, see BIP 141 (network rule) */
+static const unsigned int MAX_BLOCK_WEIGHT = 4000000 * MAX_BLOCK_SIZE_SCALE;
+/** The maximum allowed size for a block excluding witness data, in bytes (network rule) */
+static const unsigned int MAX_BLOCK_BASE_SIZE = 1000000 * MAX_BLOCK_SIZE_SCALE;
 /** The maximum allowed number of signature check operations in a block (network rule) */
-static const unsigned int MAX_BLOCK_SIGOPS = 20000;
-/** The maximum size of a transaction (network rule) */
-static const unsigned int MAX_TX_SIZE = 100000;
+static const int64_t MAX_BLOCK_SIGOPS_COST = 80000 * MAX_BLOCK_SIZE_SCALE;
 /** Coinbase transaction outputs can only be spent after this number of new blocks (network rule) */
 static const int COINBASE_MATURITY = 100;
 
-/** Flags for LockTime() */
+/** Kernel input must have this number of confirmations (network rule) */
+static const int STAKE_MIN_CONFIRMATIONS = 100;
+
+/** Flags for nSequence and nLockTime locks */
 enum {
+    /* Interpret sequence numbers as relative lock-time constraints. */
+    LOCKTIME_VERIFY_SEQUENCE = (1 << 0),
+
     /* Use GetMedianTimePast() instead of nTime for end point timestamp. */
     LOCKTIME_MEDIAN_TIME_PAST = (1 << 1),
 };
-
-/** Used as the flags parameter to CheckFinalTx() in non-consensus code */
-static const unsigned int STANDARD_LOCKTIME_VERIFY_FLAGS = LOCKTIME_MEDIAN_TIME_PAST;
 
 #endif // BITCOIN_CONSENSUS_CONSENSUS_H

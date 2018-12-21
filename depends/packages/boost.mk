@@ -1,9 +1,8 @@
 package=boost
-$(package)_version=1_62_0
-$(package)_download_path=http://sourceforge.net/projects/boost/files/boost/1.62.0
+$(package)_version=1_63_0
+$(package)_download_path=https://sourceforge.net/projects/boost/files/boost/1.63.0
 $(package)_file_name=$(package)_$($(package)_version).tar.bz2
-$(package)_sha256_hash=36c96b0f6155c98404091d8ceb48319a28279ca0333fba1ad8611eb90afb2ca0
-$(package)_patches=deprecated_auto_ptr.patch include_poll.patch
+$(package)_sha256_hash=beae2529f759f6b3bf3f4969a19c2e9d6f0c503edcb2de4a61d1428519fcb3b0
 
 define $(package)_set_vars
 $(package)_config_opts_release=variant=release
@@ -21,14 +20,12 @@ $(package)_archiver_$(host_os)=$($(package)_ar)
 $(package)_toolset_darwin=darwin
 $(package)_archiver_darwin=$($(package)_libtool)
 $(package)_config_libraries=chrono,filesystem,program_options,system,thread,test
-$(package)_cxxflags=-fvisibility=hidden
+$(package)_cxxflags=-std=c++11 -fvisibility=hidden
 $(package)_cxxflags_linux=-fPIC
 endef
 
 define $(package)_preprocess_cmds
-  echo "using $(boost_toolset_$(host_os)) : : $($(package)_cxx) : <cxxflags>\"$($(package)_cxxflags) $($(package)_cppflags)\" <linkflags>\"$($(package)_ldflags)\" <archiver>\"$(boost_archiver_$(host_os))\" <striper>\"$(host_STRIP)\"  <ranlib>\"$(host_RANLIB)\" <rc>\"$(host_WINDRES)\" : ;" > user-config.jam && \
-   patch -p1 < $($(package)_patch_dir)/deprecated_auto_ptr.patch && \
-   patch -p1 < $($(package)_patch_dir)/include_poll.patch
+  echo "using $(boost_toolset_$(host_os)) : : $($(package)_cxx) : <cxxflags>\"$($(package)_cxxflags) $($(package)_cppflags)\" <linkflags>\"$($(package)_ldflags)\" <archiver>\"$(boost_archiver_$(host_os))\" <striper>\"$(host_STRIP)\"  <ranlib>\"$(host_RANLIB)\" <rc>\"$(host_WINDRES)\" : ;" > user-config.jam
 endef
 
 define $(package)_config_cmds

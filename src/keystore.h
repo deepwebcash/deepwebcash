@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2014 The Bitcoin Core developers
+// Copyright (c) 2009-2015 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -11,8 +11,6 @@
 #include "script/script.h"
 #include "script/standard.h"
 #include "sync.h"
-#include "dwcash/Address.hpp"
-#include "dwcash/NoteEncryption.hpp"
 
 #include <boost/signals2/signal.hpp>
 #include <boost/variant.hpp>
@@ -22,7 +20,6 @@ class CKeyStore
 {
 protected:
     mutable CCriticalSection cs_KeyStore;
-    mutable CCriticalSection cs_SpendingKeyStore;
 
 public:
     virtual ~CKeyStore() {}
@@ -35,7 +32,7 @@ public:
     virtual bool HaveKey(const CKeyID &address) const =0;
     virtual bool GetKey(const CKeyID &address, CKey& keyOut) const =0;
     virtual void GetKeys(std::set<CKeyID> &setAddress) const =0;
-    virtual bool GetPubKey(const CKeyID &address, CPubKey& vchPubKeyOut) const;
+    virtual bool GetPubKey(const CKeyID &address, CPubKey& vchPubKeyOut) const =0;
 
     //! Support for BIP 0013 : see https://github.com/bitcoin/bips/blob/master/bip-0013.mediawiki
     virtual bool AddCScript(const CScript& redeemScript) =0;
@@ -47,34 +44,25 @@ public:
     virtual bool RemoveWatchOnly(const CScript &dest) =0;
     virtual bool HaveWatchOnly(const CScript &dest) const =0;
     virtual bool HaveWatchOnly() const =0;
-
-    //! Add a spending key to the store.
-    virtual bool AddSpendingKey(const libdwcash::SpendingKey &sk) =0;
-
-    //! Check whether a spending key corresponding to a given payment address is present in the store.
-    virtual bool HaveSpendingKey(const libdwcash::PaymentAddress &address) const =0;
-    virtual bool GetSpendingKey(const libdwcash::PaymentAddress &address, libdwcash::SpendingKey& skOut) const =0;
-    virtual void GetPaymentAddresses(std::set<libdwcash::PaymentAddress> &setAddress) const =0;
 };
 
 typedef std::map<CKeyID, CKey> KeyMap;
+typedef std::map<CKeyID, CPubKey> WatchKeyMap;
 typedef std::map<CScriptID, CScript > ScriptMap;
 typedef std::set<CScript> WatchOnlySet;
-typedef std::map<libdwcash::PaymentAddress, libdwcash::SpendingKey> SpendingKeyMap;
-typedef std::map<libdwcash::PaymentAddress, ZCNoteDecryption> NoteDecryptorMap;
 
 /** Basic key store, that keeps keys in an address->secret map */
 class CBasicKeyStore : public CKeyStore
 {
 protected:
     KeyMap mapKeys;
+    WatchKeyMap mapWatchKeys;
     ScriptMap mapScripts;
     WatchOnlySet setWatchOnly;
-    SpendingKeyMap mapSpendingKeys;
-    NoteDecryptorMap mapNoteDecryptors;
 
 public:
     bool AddKeyPubKey(const CKey& key, const CPubKey &pubkey);
+    bool GetPubKey(const CKeyID &address, CPubKey& vchPubKeyOut) const;
     bool HaveKey(const CKeyID &address) const
     {
         bool result;
@@ -118,60 +106,9 @@ public:
     virtual bool RemoveWatchOnly(const CScript &dest);
     virtual bool HaveWatchOnly(const CScript &dest) const;
     virtual bool HaveWatchOnly() const;
-
-    bool AddSpendingKey(const libdwcash::SpendingKey &sk);
-    bool HaveSpendingKey(const libdwcash::PaymentAddress &address) const
-    {
-        bool result;
-        {
-            LOCK(cs_SpendingKeyStore);
-            result = (mapSpendingKeys.count(address) > 0);
-        }
-        return result;
-    }
-    bool GetSpendingKey(const libdwcash::PaymentAddress &address, libdwcash::SpendingKey &skOut) const
-    {
-        {
-            LOCK(cs_SpendingKeyStore);
-            SpendingKeyMap::const_iterator mi = mapSpendingKeys.find(address);
-            if (mi != mapSpendingKeys.end())
-            {
-                skOut = mi->second;
-                return true;
-            }
-        }
-        return false;
-    }
-    bool GetNoteDecryptor(const libdwcash::PaymentAddress &address, ZCNoteDecryption &decOut) const
-    {
-        {
-            LOCK(cs_SpendingKeyStore);
-            NoteDecryptorMap::const_iterator mi = mapNoteDecryptors.find(address);
-            if (mi != mapNoteDecryptors.end())
-            {
-                decOut = mi->second;
-                return true;
-            }
-        }
-        return false;
-    }
-    void GetPaymentAddresses(std::set<libdwcash::PaymentAddress> &setAddress) const
-    {
-        setAddress.clear();
-        {
-            LOCK(cs_SpendingKeyStore);
-            SpendingKeyMap::const_iterator mi = mapSpendingKeys.begin();
-            while (mi != mapSpendingKeys.end())
-            {
-                setAddress.insert((*mi).first);
-                mi++;
-            }
-        }
-    }
 };
 
 typedef std::vector<unsigned char, secure_allocator<unsigned char> > CKeyingMaterial;
 typedef std::map<CKeyID, std::pair<CPubKey, std::vector<unsigned char> > > CryptedKeyMap;
-typedef std::map<libdwcash::PaymentAddress, std::vector<unsigned char> > CryptedSpendingKeyMap;
 
 #endif // BITCOIN_KEYSTORE_H
